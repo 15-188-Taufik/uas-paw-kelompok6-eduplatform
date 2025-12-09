@@ -1,0 +1,6 @@
+# Membuat file .gitignore otomatis
+echo "venv/" > .gitignore
+echo "__pycache__/" >> .gitignore
+echo "*.pyc" >> .gitignore
+echo "*.egg-info/" >> .gitignore
+echo ".pytest_cache/" >> .gitignore

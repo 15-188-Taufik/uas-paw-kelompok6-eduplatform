@@ -1,0 +1,12 @@
+# Folder dependency (Jangan diupload)
+node_modules/
+env/
+venv/
+__pycache__/
+dist/
+build/
+
+# File Environment & System
+.env
+.DS_Store
+*.log
