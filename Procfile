@@ -1,1 +1,1 @@
-web: pip install -e . && initialize_eduplatform_db development.ini && waitress-serve --listen=0.0.0.0:$PORT --call eduplatform:main
+web: pip install -e . && initialize_eduplatform_db development.ini && waitress-serve --listen=0.0.0.0:$PORT development.ini
