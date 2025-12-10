@@ -1,0 +1,5 @@
+[console_scripts]
+initialize_eduplatform_db = eduplatform.scripts.initialize_db:main
+
+[paste.app_factory]
+main = eduplatform:main
