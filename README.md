@@ -64,10 +64,14 @@ listen = 127.0.0.1:8080
 
 ### ▶️ Menjalankan Aplikasi
 Setelah semua terinstall, jalankan perintah berikut:
+diterminal root:
 ```bash 
 pserve development.ini --reload
 ```
-
 Jika sukses, terminal akan menampilkan: Serving on http://127.0.0.1:8080
 
 Buka browser dan akses: http://localhost:8080
+
+### Frontend 
+https://uas-paw-kelompok6-eduplatform.vercel.app/
+
