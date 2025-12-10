@@ -5,15 +5,19 @@ from pyramid.paster import bootstrap, setup_logging
 from sqlalchemy.exc import OperationalError
 
 from .. import models
-
+# Import Base agar kita bisa membuat tabel secara otomatis
+from ..models.meta import Base 
 
 def setup_models(dbsession):
     """
     Add or update models / fixtures in the database.
-
     """
-    model = models.mymodel.MyModel(name='one', value=1)
-    dbsession.add(model)
+    # BAGIAN INI SAYA KOSONGKAN (pass).
+    # Kode sebelumnya error karena mencoba mengisi data ke tabel 'models' / 'MyModel'
+    # yang kemungkinan tidak ada atau cuma contoh template.
+    
+    # Jika nanti Anda ingin membuat User Admin otomatis, tulis kodenya di sini.
+    pass
 
 
 def parse_args(argv):
@@ -33,8 +37,20 @@ def main(argv=sys.argv):
     try:
         with env['request'].tm:
             dbsession = env['request'].dbsession
+            
+            # --- TAMBAHAN BARU (PENTING) ---
+            # Kita ambil engine database dan paksa buat semua tabel 
+            # berdasarkan kodingan models Anda.
+            engine = dbsession.bind
+            Base.metadata.create_all(engine)
+            # -------------------------------
+
             setup_models(dbsession)
-    except OperationalError:
+            
+            print("Sukses! Tabel database telah dibuat.")
+
+    except OperationalError as e:
+        print(f"Terjadi error operasional: {e}")
         print('''
 Pyramid is having a problem using your SQL database.  The problem
 might be caused by one of the following things:
