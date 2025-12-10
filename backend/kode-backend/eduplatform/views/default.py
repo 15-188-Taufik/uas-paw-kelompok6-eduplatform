@@ -5,7 +5,7 @@ import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 import datetime
-import traceback # [BARU] Untuk melihat error detail di terminal
+import traceback
 
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest, HTTPUnauthorized, HTTPNotFound, HTTPForbidden, HTTPInternalServerError
@@ -35,9 +35,12 @@ cloudinary.config(
 @view_config(route_name='api_login', request_method='OPTIONS')
 @view_config(route_name='api_register', request_method='OPTIONS')
 @view_config(route_name='courses', request_method='OPTIONS')
+@view_config(route_name='course_detail', request_method='OPTIONS') # Update/Delete Course
 @view_config(route_name='modules', request_method='OPTIONS')
 @view_config(route_name='lessons', request_method='OPTIONS')
+@view_config(route_name='lesson_detail', request_method='OPTIONS') # Update/Delete Lesson
 @view_config(route_name='assignments', request_method='OPTIONS')
+@view_config(route_name='assignment_detail', request_method='OPTIONS') # Update/Delete Assignment
 @view_config(route_name='submissions', request_method='OPTIONS')
 @view_config(route_name='enroll', request_method='OPTIONS')
 @view_config(route_name='complete_lesson', request_method='OPTIONS')
@@ -175,7 +178,7 @@ def create_module(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 4. LESSONS
+# 4. LESSONS (CRUD LENGKAP)
 # ==========================================
 
 @view_config(route_name='lessons', renderer='json', request_method='GET')
@@ -232,8 +235,70 @@ def create_lesson(request):
         print(f"Error creating lesson: {e}")
         return HTTPBadRequest(json_body={'error': f"Failed to create lesson: {str(e)}"})
 
+# [BARU] UPDATE LESSON (Mendukung File Upload Baru)
+# Perhatikan: Di React nanti gunakan FormData dan method POST dengan header X-HTTP-Method-Override: PUT
+# ATAU gunakan POST biasa di view ini jika frontend susah kirim PUT Multipart.
+# Tapi Pyramid bisa handle PUT via POST form data asalkan library support.
+# Untuk amannya, kita pakai POST di sini tapi logicnya UPDATE, atau request.POST
+@view_config(route_name='lesson_detail', renderer='json', request_method='POST') # Kita gunakan POST untuk update file
+@view_config(route_name='lesson_detail', renderer='json', request_method='PUT')
+def update_lesson(request):
+    lesson_id = request.matchdict['id']
+    try:
+        lesson = request.dbsession.query(Lesson).get(lesson_id)
+        if not lesson:
+            return HTTPNotFound(json_body={'error': 'Lesson not found'})
+
+        # Cek apakah request berupa JSON atau FormData
+        try:
+            # Jika JSON (hanya update text)
+            data = request.json_body
+            if 'title' in data: lesson.title = data['title']
+            if 'content_text' in data: lesson.content_text = data['content_text']
+            if 'video_url' in data: lesson.video_url = data['video_url']
+            if 'is_preview' in data: lesson.is_preview = data['is_preview']
+        except:
+            # Jika FormData (ada upload file)
+            # Pyramid otomatis parse POST form data
+            if request.POST.get('title'): lesson.title = request.POST.get('title')
+            if request.POST.get('content_text'): lesson.content_text = request.POST.get('content_text')
+            
+            # Update File jika ada
+            input_file = request.POST.get('file_material')
+            if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
+                 upload_result = cloudinary.uploader.upload(
+                    input_file.file, 
+                    folder="eduplatform/lessons", 
+                    resource_type="auto"
+                )
+                 lesson.video_url = upload_result.get("secure_url")
+            elif request.POST.get('video_url'):
+                 # Jika user input link manual
+                 lesson.video_url = request.POST.get('video_url')
+
+        request.dbsession.add(lesson)
+        return {'success': True, 'message': 'Lesson updated', 'lesson': lesson.to_dict()}
+    except Exception as e:
+        print(f"Update Lesson Error: {e}")
+        return HTTPBadRequest(json_body={'error': str(e)})
+
+# [BARU] DELETE LESSON
+@view_config(route_name='lesson_detail', renderer='json', request_method='DELETE')
+def delete_lesson(request):
+    lesson_id = request.matchdict['id']
+    try:
+        lesson = request.dbsession.query(Lesson).get(lesson_id)
+        if not lesson:
+            return HTTPNotFound(json_body={'error': 'Lesson not found'})
+        
+        request.dbsession.delete(lesson)
+        return {'success': True, 'message': 'Lesson deleted'}
+    except Exception as e:
+        return HTTPBadRequest(json_body={'error': str(e)})
+
+
 # ==========================================
-# 5. ASSIGNMENTS
+# 5. ASSIGNMENTS (CRUD LENGKAP)
 # ==========================================
 
 @view_config(route_name='assignments', renderer='json', request_method='GET')
@@ -280,8 +345,41 @@ def create_assignment(request):
     except Exception as e:
         return HTTPBadRequest(json_body={'error': str(e)})
 
+# [BARU] UPDATE ASSIGNMENT
+@view_config(route_name='assignment_detail', renderer='json', request_method='PUT')
+def update_assignment(request):
+    assign_id = request.matchdict['id']
+    try:
+        data = request.json_body
+        assign = request.dbsession.query(Assignment).get(assign_id)
+        if not assign:
+            return HTTPNotFound(json_body={'error': 'Assignment not found'})
+        
+        if 'title' in data: assign.title = data['title']
+        if 'description' in data: assign.description = data['description']
+        # Handle due_date jika dikirim (biasanya string YYYY-MM-DD)
+        
+        request.dbsession.add(assign)
+        return {'success': True, 'message': 'Assignment updated'}
+    except Exception as e:
+        return HTTPBadRequest(json_body={'error': str(e)})
+
+# [BARU] DELETE ASSIGNMENT
+@view_config(route_name='assignment_detail', renderer='json', request_method='DELETE')
+def delete_assignment(request):
+    assign_id = request.matchdict['id']
+    try:
+        assign = request.dbsession.query(Assignment).get(assign_id)
+        if not assign:
+            return HTTPNotFound(json_body={'error': 'Assignment not found'})
+        
+        request.dbsession.delete(assign)
+        return {'success': True, 'message': 'Assignment deleted'}
+    except Exception as e:
+        return HTTPBadRequest(json_body={'error': str(e)})
+
 # ==========================================
-# 6. SUBMISSIONS & GRADING (LOGGING DITAMBAHKAN)
+# 6. SUBMISSIONS & GRADING
 # ==========================================
 
 @view_config(route_name='my_submission', renderer='json', request_method='GET')
@@ -363,13 +461,11 @@ def get_assignment_submissions(request):
         })
     return {'submissions': result}
 
-# [DIPERBAIKI] Izinkan POST/PUT dan Handle Error Lebih Detail
 @view_config(route_name='api_grade_submission', renderer='json', request_method='POST')
 @view_config(route_name='api_grade_submission', renderer='json', request_method='PUT')
 def grade_submission(request):
     submission_id = request.matchdict['id']
     
-    # [DEBUG] Lihat di terminal
     print(f"--- GRADING START for Submission ID: {submission_id} ---")
     
     try:
@@ -384,7 +480,6 @@ def grade_submission(request):
             print("[DEBUG] Submission not found in DB")
             return HTTPNotFound(json_body={'error': 'Submission not found'})
 
-        # [PERBAIKAN] Validasi Grade agar tidak crash jika string kosong
         if grade is not None and grade != "":
             try:
                 submission.grade = float(grade)
@@ -392,19 +487,17 @@ def grade_submission(request):
                 print(f"[ERROR] Grade invalid format: {grade}")
                 return HTTPBadRequest(json_body={'error': 'Grade must be a number'})
         else:
-            submission.grade = None # Atau biarkan nilai lama jika perlu
+            submission.grade = None
 
         submission.feedback = feedback
         
         request.dbsession.add(submission)
-        # request.dbsession.flush() # Transaction manager akan handle commit
-
         print("[DEBUG] Grade updated successfully")
         return {'success': True, 'message': 'Grade saved'}
         
     except Exception as e:
         print(f"[CRITICAL ERROR] Failed to grade: {e}")
-        traceback.print_exc() # Cetak error lengkap ke terminal
+        traceback.print_exc()
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================

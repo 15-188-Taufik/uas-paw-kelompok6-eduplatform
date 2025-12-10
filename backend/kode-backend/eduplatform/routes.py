@@ -5,7 +5,7 @@ def add_cors_headers_response_callback(event):
     def cors_headers(request, response):
         response.headers.update({
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS',
+            'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS', # Pastikan ada PUT dan DELETE
             'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
             'Access-Control-Allow-Credentials': 'true',
             'Access-Control-Max-Age': '1728000',
@@ -23,7 +23,7 @@ def includeme(config):
     config.add_route('register', '/api/register')
     config.add_route('login', '/api/login')
     
-    # Route Legacy untuk kompatibilitas
+    # Route Legacy
     config.add_route('api_register', '/api/register')
     config.add_route('api_login', '/api/login')
     
@@ -37,20 +37,21 @@ def includeme(config):
     
     # --- 3. MODULES ---
     config.add_route('modules', '/api/courses/{course_id}/modules') 
-    
+    # (Tambahan jika mau edit/hapus modul di masa depan)
+    config.add_route('module_detail', '/api/modules/{id}') 
+
     # --- 4. LESSONS ---
     config.add_route('lessons', '/api/modules/{module_id}/lessons')
+    # Route ini akan dipakai untuk GET, PUT (Edit), dan DELETE (Hapus)
     config.add_route('lesson_detail', '/api/lessons/{id}')
     
     # --- 5. ASSIGNMENTS ---
     config.add_route('assignments', '/api/modules/{module_id}/assignments')
+    # Route ini akan dipakai untuk GET, PUT (Edit), dan DELETE (Hapus)
     config.add_route('assignment_detail', '/api/assignments/{id}')
     
     # --- 6. SUBMISSIONS ---
-    # REVISI: Menggunakan satu route konsisten 'submissions'
-    # URL ini menangani GET (lihat list - Instructor) dan POST (kirim tugas - Student)
     config.add_route('submissions', '/api/assignments/{assignment_id}/submissions')
-    
     config.add_route('my_submission', '/api/assignments/{assignment_id}/my_submission')
     config.add_route('api_grade_submission', '/api/submissions/{id}/grade')
 

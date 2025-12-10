@@ -1,3 +1,4 @@
+import os
 from pyramid.config import Configurator
 from pyramid.events import NewRequest
 
@@ -12,6 +13,10 @@ def add_cors_headers_response_callback(event):
     event.request.add_response_callback(cors_headers)
 
 def main(global_config, **settings):
+
+    if 'DATABASE_URL' in os.environ:
+        settings['sqlalchemy.url'] = os.environ['DATABASE_URL']
+
     with Configurator(settings=settings) as config:
         config.include('pyramid_jinja2') # Opsional jika tidak dipakai lagi
         config.include('.models')
