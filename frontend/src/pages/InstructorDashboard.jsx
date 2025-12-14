@@ -167,7 +167,7 @@ const InstructorDashboard = () => {
                           onClick={() => navigate(`/manage-course/${course.id}`)}
                           className="btn btn-primary w-100 fw-bold rounded-pill"
                       >
-                          <i className="bi bi-pencil-square me-2"></i>Kelola Materi
+                          <i className="bi bi-pencil-square me-2"></i>Kelola Kelas
                       </button>
                       <button 
                           onClick={() => navigate(`/course/${course.id}`)}

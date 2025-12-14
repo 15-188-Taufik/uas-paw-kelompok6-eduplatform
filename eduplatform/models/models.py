@@ -140,6 +140,8 @@ class Assignment(Base):
     title = Column(Text, nullable=False)
     description = Column(Text)
     due_date = Column(DateTime(timezone=True))
+    attachment_url = Column(Text, nullable=True) # Untuk File (PDF/Doc)
+    link_url = Column(Text, nullable=True)       # Untuk Link Referensi
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relasi

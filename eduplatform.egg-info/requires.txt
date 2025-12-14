@@ -12,6 +12,8 @@ waitress
 passlib
 bcrypt
 PyJWT
+psycopg2-binary
+cloudinary
 
 [testing]
 WebTest>=1.3.1

@@ -49,10 +49,8 @@ def options_view(request):
     return Response(body='', status=200, content_type='text/plain')
 
 # ==========================================
-# 1. USERS (Login/Register dipindah ke auth.py)
+# 1. USERS
 # ==========================================
-
-# --- HAPUS BAGIAN REGISTER DAN LOGIN DARI SINI KARENA SUDAH ADA DI auth.py ---
 
 @view_config(route_name='users', renderer='json', request_method='GET')
 def get_users(request):
@@ -248,7 +246,7 @@ def delete_lesson(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 5. ASSIGNMENTS (CRUD LENGKAP)
+# 5. ASSIGNMENTS (CRUD LENGKAP + DUE DATE)
 # ==========================================
 
 @view_config(route_name='assignments', renderer='json', request_method='GET')
@@ -261,7 +259,7 @@ def get_assignments(request):
             'id': a.id,
             'title': a.title,
             'description': a.description,
-            'due_date': str(a.due_date) if a.due_date else None
+            'due_date': str(a.due_date) if a.due_date else None # Kirim Due Date
         })
     return {'assignments': results}
 
@@ -275,7 +273,7 @@ def get_assignment_detail(request):
         'id': assign.id,
         'title': assign.title,
         'description': assign.description,
-        'due_date': str(assign.due_date) if assign.due_date else None,
+        'due_date': str(assign.due_date) if assign.due_date else None, # Kirim Due Date
         'module_id': assign.module_id
     }}
 
@@ -283,35 +281,99 @@ def get_assignment_detail(request):
 def create_assignment(request):
     module_id = request.matchdict['module_id']
     try:
-        data = request.json_body
+        # Cek apakah request berupa JSON atau Multipart (Form Data)
+        try:
+            data = request.json_body
+        except:
+            data = request.POST # Fallback ke POST params jika upload file
+
+        title = data.get('title')
+        description = data.get('description')
+        link_url = data.get('link_url')
+        
+        # Upload File (Jika ada)
+        attachment_url = None
+        input_file = request.POST.get('attachment_file') if 'attachment_file' in request.POST else None
+        
+        if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
+            upload_result = cloudinary.uploader.upload(
+                input_file.file, 
+                folder="eduplatform/assignments", 
+                resource_type="auto"
+            )
+            attachment_url = upload_result.get("secure_url")
+
+        # Proses Due Date
+        due_date_str = data.get('due_date')
+        due_date_obj = None
+        if due_date_str and due_date_str != 'null':
+            try:
+                due_date_obj = datetime.datetime.fromisoformat(due_date_str)
+            except ValueError:
+                pass
+
         new_assign = Assignment(
             module_id=module_id,
-            title=data['title'],
-            description=data.get('description')
+            title=title,
+            description=description,
+            due_date=due_date_obj,
+            attachment_url=attachment_url,
+            link_url=link_url
         )
         request.dbsession.add(new_assign)
         request.dbsession.flush()
         return {'success': True, 'assignment_id': new_assign.id}
     except Exception as e:
+        print(f"Error create assignment: {e}")
         return HTTPBadRequest(json_body={'error': str(e)})
 
 @view_config(route_name='assignment_detail', renderer='json', request_method='PUT')
+@view_config(route_name='assignment_detail', renderer='json', request_method='POST') # Support POST untuk update file
 def update_assignment(request):
     assign_id = request.matchdict['id']
     try:
-        data = request.json_body
         assign = request.dbsession.query(Assignment).get(assign_id)
         if not assign:
             return HTTPNotFound(json_body={'error': 'Assignment not found'})
         
-        if 'title' in data: assign.title = data['title']
-        if 'description' in data: assign.description = data['description']
-        
+        # Coba ambil data (JSON atau POST)
+        try:
+            data = request.json_body
+        except:
+            data = request.POST
+
+        if data.get('title'): assign.title = data.get('title')
+        if data.get('description'): assign.description = data.get('description')
+        if 'link_url' in data: assign.link_url = data.get('link_url')
+
+        # Update Due Date
+        if 'due_date' in data:
+            val = data.get('due_date')
+            if val and val != 'null':
+                try:
+                    assign.due_date = datetime.datetime.fromisoformat(val)
+                except ValueError:
+                    pass
+            else:
+                assign.due_date = None
+
+        # Update File Attachment (Jika ada upload baru)
+        input_file = request.POST.get('attachment_file') if 'attachment_file' in request.POST else None
+        if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
+             upload_result = cloudinary.uploader.upload(
+                input_file.file, 
+                folder="eduplatform/assignments", 
+                resource_type="auto"
+            )
+             assign.attachment_url = upload_result.get("secure_url")
+
         request.dbsession.add(assign)
         return {'success': True, 'message': 'Assignment updated'}
     except Exception as e:
+        print(f"Error update assignment: {e}")
         return HTTPBadRequest(json_body={'error': str(e)})
 
+        
 @view_config(route_name='assignment_detail', renderer='json', request_method='DELETE')
 def delete_assignment(request):
     assign_id = request.matchdict['id']
