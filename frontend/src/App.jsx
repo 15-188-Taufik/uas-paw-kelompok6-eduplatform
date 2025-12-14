@@ -11,6 +11,8 @@ import InstructorDashboard from './pages/InstructorDashboard';
 import CreateCoursePage from './pages/CreateCoursePage';
 import ManageCoursePage from './pages/ManageCoursePage'; // <--- Import Ini
 import GradingPage from './pages/GradingPage'; // Sesuaikan path
+import StudentDashboard from './pages/StudentDashboard';
+import InstructorCoursesPage from './pages/InstructorCoursesPage';
 
 function App() {
   return (
@@ -26,10 +28,10 @@ function App() {
           <Route path="/my-courses" element={<MyCoursesPage />} />
           <Route path="/lesson/:id" element={<LessonPage />} />
           <Route path="/assignment/:id" element={<AssignmentPage />} />
-          
+          <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
           <Route path="/create-course" element={<CreateCoursePage />} />
-          
+          <Route path="/instructor-courses" element={<InstructorCoursesPage />} />
           {/* Halaman Kelola Kursus */}
           <Route path="/manage-course/:id" element={<ManageCoursePage />} /> {/* <--- Tambah Ini */}
           

@@ -1,9 +1,10 @@
 CHANGES.txt
 MANIFEST.in
-README.txt
+README.md
 development.ini
 production.ini
 pytest.ini
+requirements.txt
 setup.py
 eduplatform/__init__.py
 eduplatform/pshell.py

@@ -3,358 +3,309 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const ManageCoursePage = () => {
-  const { id } = useParams(); // Course ID
+  const { id } = useParams(); // ID Kursus
   const navigate = useNavigate();
   
+  // State Data
   const [course, setCourse] = useState(null);
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // State untuk Form Lesson (Dipakai untuk Create & Edit)
-  const [newLessonData, setNewLessonData] = useState({ title: '', video_url: '', content_text: '', is_preview: false });
-  const [attachmentFile, setAttachmentFile] = useState(null);
-  const [activeModuleId, setActiveModuleId] = useState(null); 
-  const [showLessonForm, setShowLessonForm] = useState(false);
-  
-  // [BARU] State untuk Mode Edit
-  const [isEditingLesson, setIsEditingLesson] = useState(false);
-  const [editingLessonId, setEditingLessonId] = useState(null);
+  // State Editor
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
+  // State Form Input (Untuk Module Baru & Lesson Baru)
+  const [newModuleTitle, setNewModuleTitle] = useState('');
+  const [newLessonTitle, setNewLessonTitle] = useState('');
+  const [activeModuleId, setActiveModuleId] = useState(null); // Untuk modal add lesson
+
+  // --- 1. FETCH DATA ---
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchCourseData();
   }, [id]);
 
-  const fetchData = async () => {
+  const fetchCourseData = async () => {
     try {
+      // Ambil Info Kursus
       const courseRes = await api.get(`/courses/${id}`);
       setCourse(courseRes.data.course);
 
+      // Ambil Modules
       const modulesRes = await api.get(`/courses/${id}/modules`);
       const modulesData = modulesRes.data.modules;
 
-      // Fetch detail isi modul (lesson & assignment)
-      const detailedModules = await Promise.all(
-        modulesData.map(async (mod) => {
-            const lessonsRes = await api.get(`/modules/${mod.id}/lessons`);
-            const assignsRes = await api.get(`/modules/${mod.id}/assignments`);
-            return { 
-                ...mod, 
-                lessons: lessonsRes.data.lessons,
-                assignments: assignsRes.data.assignments || [] 
-            };
-        })
-      );
-      setModules(detailedModules);
+      // Ambil Lessons untuk setiap Module (Parallel Fetching)
+      const modulesWithLessons = await Promise.all(modulesData.map(async (mod) => {
+        const lessonsRes = await api.get(`/modules/${mod.id}/lessons`);
+        return { ...mod, lessons: lessonsRes.data.lessons };
+      }));
+
+      setModules(modulesWithLessons);
     } catch (err) {
-      console.error(err);
+      console.error("Error loading course content:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // ==========================
-  // 1. HANDLER MODUL
-  // ==========================
-  const handleAddModule = async () => {
-    const title = prompt("Masukkan Judul Modul Baru:");
-    if (!title) return;
+  // --- 2. HANDLERS (CRUD) ---
 
+  const handleAddModule = async (e) => {
+    e.preventDefault();
+    if (!newModuleTitle.trim()) return;
     try {
-      await api.post(`/courses/${id}/modules`, { title, sort_order: modules.length + 1 });
-      alert("Modul berhasil ditambahkan!");
-      fetchData(); 
+      await api.post(`/courses/${id}/modules`, { title: newModuleTitle, sort_order: modules.length });
+      setNewModuleTitle('');
+      fetchCourseData(); // Refresh data
     } catch (err) {
-      alert("Gagal menambah modul.");
+      alert('Gagal menambah modul');
     }
   };
 
-  // ==========================
-  // 2. HANDLER ASSIGNMENT (TUGAS)
-  // ==========================
-  const handleAddAssignment = async (moduleId) => {
-    const title = prompt("Judul Tugas:");
+  const handleAddLesson = async (moduleId) => {
+    const title = prompt("Masukkan Judul Pelajaran Baru:");
     if (!title) return;
-    const description = prompt("Deskripsi/Soal Tugas:");
 
     try {
-      await api.post(`/modules/${moduleId}/assignments`, { title, description });
-      alert("Tugas berhasil ditambahkan!");
-      fetchData();
-    } catch (err) {
-      alert("Gagal menambah tugas.");
-    }
-  };
-
-  // [BARU] Edit Tugas
-  const handleEditAssignment = async (assign) => {
-      const newTitle = prompt("Edit Judul Tugas:", assign.title);
-      if (newTitle === null) return; // Cancel
-      
-      const newDesc = prompt("Edit Deskripsi:", assign.description);
-      
-      try {
-          await api.put(`/assignments/${assign.id}`, {
-              title: newTitle || assign.title,
-              description: newDesc !== null ? newDesc : assign.description
-          });
-          alert("Tugas diperbarui!");
-          fetchData();
-      } catch (err) {
-          alert("Gagal update tugas.");
-      }
-  };
-
-  // [BARU] Hapus Tugas
-  const handleDeleteAssignment = async (assignId) => {
-      if (!window.confirm("Yakin ingin menghapus tugas ini? Data nilai siswa juga akan terhapus.")) return;
-
-      try {
-          await api.delete(`/assignments/${assignId}`);
-          alert("Tugas dihapus.");
-          fetchData();
-      } catch (err) {
-          alert("Gagal menghapus tugas.");
-      }
-  };
-
-  // ==========================
-  // 3. HANDLER LESSON (MATERI)
-  // ==========================
-  
-  // Buka form untuk TAMBAH materi baru
-  const openAddLesson = (moduleId) => {
-      setActiveModuleId(moduleId);
-      setIsEditingLesson(false); // Mode Tambah
-      setNewLessonData({ title: '', video_url: '', content_text: '', is_preview: false });
-      setAttachmentFile(null);
-      setShowLessonForm(true);
-  };
-
-  // [BARU] Buka form untuk EDIT materi
-  const openEditLesson = (lesson) => {
-      setIsEditingLesson(true); // Mode Edit
-      setEditingLessonId(lesson.id);
-      
-      // Isi form dengan data lama
-      setNewLessonData({
-          title: lesson.title,
-          video_url: lesson.video_url || '',
-          content_text: lesson.content_text || '',
-          is_preview: lesson.is_preview
+      await api.post(`/modules/${moduleId}/lessons`, { 
+        title: title, 
+        content_text: '', 
+        video_url: '',
+        sort_order: 0 // Logic sort order bisa diperbaiki nanti
       });
-      setAttachmentFile(null); // Reset file (user upload ulang jika mau ganti)
-      setShowLessonForm(true);
+      fetchCourseData();
+    } catch (err) {
+      alert('Gagal menambah pelajaran');
+    }
   };
 
-  // [BARU] Hapus Materi
+  const handleUpdateLesson = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/lessons/${selectedLesson.id}`, {
+        title: selectedLesson.title,
+        video_url: selectedLesson.video_url,
+        content_text: selectedLesson.content_text,
+        is_preview: selectedLesson.is_preview
+      });
+      alert('Perubahan berhasil disimpan!');
+      fetchCourseData(); // Refresh agar sidebar juga update jika judul berubah
+    } catch (err) {
+      console.error(err);
+      alert('Gagal menyimpan perubahan.');
+    }
+  };
+
   const handleDeleteLesson = async (lessonId) => {
-      if (!window.confirm("Yakin ingin menghapus materi ini?")) return;
-      try {
-          await api.delete(`/lessons/${lessonId}`);
-          alert("Materi dihapus.");
-          fetchData();
-      } catch (err) {
-          alert("Gagal menghapus materi.");
-      }
+    if (!confirm('Yakin ingin menghapus pelajaran ini?')) return;
+    try {
+      await api.delete(`/lessons/${lessonId}`);
+      setSelectedLesson(null); // Clear editor
+      fetchCourseData();
+    } catch (err) {
+      alert('Gagal menghapus pelajaran.');
+    }
   };
 
-  // Submit Form (Bisa Create atau Update)
-  const submitLesson = async (e) => {
-      e.preventDefault();
-      try {
-          const formData = new FormData();
-          formData.append('title', newLessonData.title);
-          formData.append('video_url', newLessonData.video_url);
-          formData.append('content_text', newLessonData.content_text);
-          formData.append('is_preview', newLessonData.is_preview);
-          
-          if (attachmentFile) {
-              formData.append('file_material', attachmentFile); // Pastikan key backend 'file_material'
-          }
-
-          if (isEditingLesson) {
-              // --- LOGIKA UPDATE ---
-              // Kita pakai POST ke url detail lesson (sesuai backend default.py update_lesson)
-              await api.post(`/lessons/${editingLessonId}`, formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' }
-              });
-              alert("Materi berhasil diperbarui!");
-          } else {
-              // --- LOGIKA CREATE ---
-              await api.post(`/modules/${activeModuleId}/lessons`, formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' }
-              });
-              alert("Materi berhasil ditambahkan!");
-          }
-
-          setShowLessonForm(false);
-          fetchData();
-      } catch (err) {
-          console.error(err);
-          alert("Gagal menyimpan materi.");
-      }
-  };
-
-  if (loading) return <p style={{textAlign:'center'}}>Loading...</p>;
+  // --- 3. RENDER ---
+  if (loading) return <div className="text-center p-5">Loading Editor...</div>;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
+    <div className="d-flex flex-column vh-100" style={{ backgroundColor: '#f8f9fa' }}>
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #ddd', paddingBottom: '10px' }}>
-        <div>
-            <button onClick={() => navigate('/instructor-dashboard')} style={{background:'none', border:'none', color:'#666', cursor:'pointer', marginBottom:'5px'}}>← Dashboard</button>
-            <h2 style={{ margin: 0, color: '#bc2131' }}>Kelola: {course.title}</h2>
+      {/* HEADER EDITOR */}
+      <div className="bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center shadow-sm sticky-top" style={{ zIndex: 10 }}>
+        <div className="d-flex align-items-center gap-3">
+          <button onClick={() => navigate('/instructor-dashboard')} className="btn btn-outline-secondary btn-sm rounded-circle">
+            <i className="bi bi-arrow-left"></i>
+          </button>
+          <div>
+             <h5 className="mb-0 fw-bold text-dark">{course.title}</h5>
+             <small className="text-muted">Mode Edit Konten</small>
+          </div>
         </div>
-        <button onClick={handleAddModule} style={{ padding: '10px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-            + Tambah Modul
+        <button className="btn btn-primary btn-sm fw-bold px-3 rounded-pill">
+          <i className="bi bi-eye me-2"></i>Preview Kursus
         </button>
       </div>
 
-      {/* List Modul */}
-      {modules.map((mod) => (
-        <div key={mod.id} style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px', overflow: 'hidden' }}>
-            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{mod.title}</h3>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={() => openAddLesson(mod.id)} style={{ fontSize: '0.8rem', padding: '5px 10px', cursor: 'pointer' }}>+ Materi</button>
-                    <button onClick={() => handleAddAssignment(mod.id)} style={{ fontSize: '0.8rem', padding: '5px 10px', cursor: 'pointer' }}>+ Tugas</button>
-                </div>
-            </div>
-
-            <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
-                {/* --- LOOPING LESSONS --- */}
-                {mod.lessons.map(les => (
-                    <li key={les.id} style={{ padding: '10px 15px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display:'flex', alignItems:'center' }}>
-                            <span style={{ marginRight: '10px' }}>📄</span> 
-                            {les.title} 
-                            {les.is_preview && <span style={{ marginLeft:'10px', fontSize:'0.7rem', background:'#eee', padding:'2px 5px' }}>Preview</span>}
+      <div className="flex-grow-1 overflow-hidden">
+        <div className="row h-100 g-0">
+          
+          {/* KOLOM KIRI: SIDEBAR MODUL (Scrollable) */}
+          <div className="col-md-4 col-lg-3 bg-white border-end h-100 overflow-auto">
+            <div className="p-3">
+              <h6 className="fw-bold text-muted text-uppercase small mb-3">Struktur Materi</h6>
+              
+              {/* List Modules */}
+              <div className="accordion" id="accordionModules">
+                {modules.map((mod, idx) => (
+                  <div className="accordion-item border-0 mb-2 shadow-sm rounded overflow-hidden" key={mod.id}>
+                    <h2 className="accordion-header">
+                      <button 
+                        className="accordion-button collapsed fw-bold bg-light text-dark py-2" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target={`#collapse${mod.id}`}
+                      >
+                        <span className="me-2 text-muted">{idx + 1}.</span> {mod.title}
+                      </button>
+                    </h2>
+                    <div id={`collapse${mod.id}`} className="accordion-collapse collapse" data-bs-parent="#accordionModules">
+                      <div className="accordion-body p-0">
+                        <div className="list-group list-group-flush">
+                          {mod.lessons.map((lesson) => (
+                            <button
+                              key={lesson.id}
+                              onClick={() => setSelectedLesson(lesson)}
+                              className={`list-group-item list-group-item-action border-0 py-2 small d-flex align-items-center justify-content-between px-4 ${selectedLesson?.id === lesson.id ? 'bg-primary bg-opacity-10 text-primary fw-bold' : 'text-muted'}`}
+                            >
+                              <div className="d-flex align-items-center gap-2">
+                                <i className={`bi ${lesson.video_url ? 'bi-play-circle-fill' : 'bi-file-text'} small`}></i>
+                                <span className="text-truncate" style={{ maxWidth: '150px' }}>{lesson.title}</span>
+                              </div>
+                              {selectedLesson?.id === lesson.id && <i className="bi bi-chevron-right small"></i>}
+                            </button>
+                          ))}
+                          
+                          {/* Tombol Add Lesson Kecil */}
+                          <button 
+                            onClick={() => handleAddLesson(mod.id)}
+                            className="list-group-item list-group-item-action border-0 text-center text-primary small py-2 fw-bold bg-light"
+                          >
+                            <i className="bi bi-plus-circle me-1"></i> Tambah Pelajaran
+                          </button>
                         </div>
-                        
-                        {/* Tombol Aksi Lesson */}
-                        <div style={{ display:'flex', gap:'5px' }}>
-                            <button 
-                                onClick={() => openEditLesson(les)}
-                                style={{ background:'none', border:'1px solid #ccc', borderRadius:'4px', cursor:'pointer', fontSize:'0.8rem' }}
-                                title="Edit Materi"
-                            >
-                                ✏️
-                            </button>
-                            <button 
-                                onClick={() => handleDeleteLesson(les.id)}
-                                style={{ background:'none', border:'1px solid #ffcccc', color:'red', borderRadius:'4px', cursor:'pointer', fontSize:'0.8rem' }}
-                                title="Hapus Materi"
-                            >
-                                🗑️
-                            </button>
-                        </div>
-                    </li>
-                ))}
-                
-                {/* --- LOOPING ASSIGNMENTS --- */}
-                {mod.assignments.map(ass => (
-                    <li key={ass.id} style={{ padding: '10px 15px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff5f5' }}>
-                        <div style={{ color: '#d9534f' }}>
-                            <span style={{ marginRight: '10px' }}>📝</span> 
-                            {ass.title}
-                        </div>
-                        
-                        <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
-                            {/* Tombol ke Halaman Grading */}
-                            <button 
-                                onClick={() => navigate(`/grading/${ass.id}`)}
-                                style={{ 
-                                    padding: '4px 8px', 
-                                    backgroundColor: 'white', 
-                                    border: '1px solid #bc2131', 
-                                    color: '#bc2131', 
-                                    borderRadius: '4px', 
-                                    cursor: 'pointer',
-                                    fontSize: '0.8rem'
-                                }}
-                            >
-                                Lihat Nilai
-                            </button>
-
-                            {/* Tombol Aksi Assignment */}
-                            <button 
-                                onClick={() => handleEditAssignment(ass)}
-                                style={{ background:'white', border:'1px solid #ccc', borderRadius:'4px', cursor:'pointer', fontSize:'0.8rem', padding:'4px 8px' }}
-                                title="Edit Tugas"
-                            >
-                                ✏️
-                            </button>
-                            <button 
-                                onClick={() => handleDeleteAssignment(ass.id)}
-                                style={{ background:'white', border:'1px solid #ffcccc', color:'red', borderRadius:'4px', cursor:'pointer', fontSize:'0.8rem', padding:'4px 8px' }}
-                                title="Hapus Tugas"
-                            >
-                                🗑️
-                            </button>
-                        </div>
-                    </li>
-                ))}
-
-                {mod.lessons.length === 0 && mod.assignments.length === 0 && (
-                    <li style={{ padding: '15px', fontStyle: 'italic', color: '#999' }}>Belum ada konten.</li>
-                )}
-            </ul>
-        </div>
-      ))}
-
-      {/* Modal Form Lesson (Tambah / Edit) */}
-      {showLessonForm && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-              <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', width: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
-                  <h3 style={{ marginTop: 0 }}>
-                      {isEditingLesson ? 'Edit Materi' : 'Tambah Materi Baru'}
-                  </h3>
-                  
-                  <form onSubmit={submitLesson} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <input 
-                        type="text" placeholder="Judul Materi" required
-                        value={newLessonData.title} 
-                        onChange={e => setNewLessonData({...newLessonData, title: e.target.value})}
-                        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                      />
-                      <textarea 
-                        rows="4" placeholder="Isi Teks Materi..."
-                        value={newLessonData.content_text} 
-                        onChange={e => setNewLessonData({...newLessonData, content_text: e.target.value})}
-                        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                      />
-                      <input 
-                        type="text" placeholder="Link Video Youtube (Optional)" 
-                        value={newLessonData.video_url} 
-                        onChange={e => setNewLessonData({...newLessonData, video_url: e.target.value})}
-                        style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                      />
-                      
-                      <div style={{ border: '1px dashed #ccc', padding: '10px', borderRadius: '4px' }}>
-                          <label style={{ fontSize: '0.9rem', display: 'block', marginBottom: '5px' }}>
-                              {isEditingLesson ? 'Ganti File (PDF/PPT) - Kosongkan jika tidak ubah:' : 'Upload File (PDF/PPT):'}
-                          </label>
-                          <input type="file" onChange={e => setAttachmentFile(e.target.files[0])} />
                       </div>
-
-                      <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={newLessonData.is_preview}
-                            onChange={e => setNewLessonData({...newLessonData, is_preview: e.target.checked})}
-                          /> Set sebagai Preview (Dapat dilihat tanpa Enroll)
-                      </label>
-
-                      <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                          <button type="button" onClick={() => setShowLessonForm(false)} style={{ flex: 1, padding: '10px', background: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Batal</button>
-                          <button type="submit" style={{ flex: 1, padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Simpan</button>
-                      </div>
-                  </form>
+                    </div>
+                  </div>
+                ))}
               </div>
-          </div>
-      )}
 
+              {/* Form Add Module */}
+              <form onSubmit={handleAddModule} className="mt-4 pt-3 border-top">
+                <div className="input-group">
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm" 
+                    placeholder="Judul Modul Baru..." 
+                    value={newModuleTitle}
+                    onChange={(e) => setNewModuleTitle(e.target.value)}
+                  />
+                  <button className="btn btn-dark btn-sm" type="submit">Tambah</button>
+                </div>
+              </form>
+
+            </div>
+          </div>
+
+          {/* KOLOM KANAN: EDITOR AREA (Scrollable) */}
+          <div className="col-md-8 col-lg-9 h-100 overflow-auto bg-light">
+            {selectedLesson ? (
+              <div className="p-4 p-lg-5" style={{ maxWidth: '900px', margin: '0 auto' }}>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h4 className="fw-bold mb-0">Edit Pelajaran</h4>
+                  <button 
+                    onClick={() => handleDeleteLesson(selectedLesson.id)}
+                    className="btn btn-outline-danger btn-sm"
+                  >
+                    <i className="bi bi-trash"></i> Hapus
+                  </button>
+                </div>
+
+                <div className="card border-0 shadow-sm rounded-4">
+                  <div className="card-body p-4">
+                    <form onSubmit={handleUpdateLesson}>
+                      
+                      {/* Judul */}
+                      <div className="mb-3">
+                        <label className="form-label fw-bold text-muted small">JUDUL PELAJARAN</label>
+                        <input 
+                          type="text" 
+                          className="form-control form-control-lg fw-bold" 
+                          value={selectedLesson.title}
+                          onChange={(e) => setSelectedLesson({...selectedLesson, title: e.target.value})}
+                        />
+                      </div>
+
+                      {/* Video URL */}
+                      <div className="mb-3">
+                        <label className="form-label fw-bold text-muted small">VIDEO URL / EMBED LINK</label>
+                        <div className="input-group">
+                           <span className="input-group-text bg-white border-end-0"><i className="bi bi-link-45deg"></i></span>
+                           <input 
+                             type="text" 
+                             className="form-control border-start-0 ps-0" 
+                             placeholder="https://..."
+                             value={selectedLesson.video_url || ''}
+                             onChange={(e) => setSelectedLesson({...selectedLesson, video_url: e.target.value})}
+                           />
+                        </div>
+                        <div className="form-text text-muted small">Mendukung link YouTube, Vimeo, atau link file langsung.</div>
+                      </div>
+
+                      {/* Preview Video Box */}
+                      {selectedLesson.video_url && (
+                          <div className="ratio ratio-16x9 mb-4 bg-dark rounded overflow-hidden">
+                             {/* iframe sederhana untuk preview */}
+                             <iframe src={selectedLesson.video_url.replace('watch?v=', 'embed/')} title="Video Preview" allowFullScreen></iframe>
+                          </div>
+                      )}
+
+                      {/* Konten Text */}
+                      <div className="mb-4">
+                        <label className="form-label fw-bold text-muted small">DESKRIPSI & MATERI TEKS</label>
+                        <textarea 
+                          className="form-control" 
+                          rows="8" 
+                          placeholder="Tuliskan materi pelajaran di sini..."
+                          value={selectedLesson.content_text || ''}
+                          onChange={(e) => setSelectedLesson({...selectedLesson, content_text: e.target.value})}
+                          style={{ resize: 'none' }}
+                        ></textarea>
+                      </div>
+
+                      {/* Checkbox Preview */}
+                      <div className="form-check mb-4">
+                        <input 
+                          className="form-check-input" 
+                          type="checkbox" 
+                          id="checkPreview"
+                          checked={selectedLesson.is_preview || false}
+                          onChange={(e) => setSelectedLesson({...selectedLesson, is_preview: e.target.checked})}
+                        />
+                        <label className="form-check-label text-dark" htmlFor="checkPreview">
+                          Jadikan sebagai <strong>Pratinjau Gratis</strong> (Bisa diakses tanpa mendaftar)
+                        </label>
+                      </div>
+
+                      <div className="d-grid">
+                        <button type="submit" className="btn btn-primary fw-bold py-2">
+                          <i className="bi bi-save me-2"></i> Simpan Perubahan
+                        </button>
+                      </div>
+
+                    </form>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Empty State (Belum ada pelajaran dipilih)
+              <div className="h-100 d-flex flex-column justify-content-center align-items-center text-muted p-5">
+                <div className="bg-white p-4 rounded-circle shadow-sm mb-3">
+                  <i className="bi bi-pencil-square fs-1 text-primary opacity-50"></i>
+                </div>
+                <h4 className="fw-bold text-dark">Editor Konten</h4>
+                <p className="text-center" style={{ maxWidth: '400px' }}>
+                  Pilih salah satu pelajaran dari sidebar kiri untuk mulai mengedit, atau buat modul baru jika belum ada.
+                </p>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };

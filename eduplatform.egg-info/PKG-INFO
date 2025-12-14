@@ -35,49 +35,83 @@ Dynamic: provides-extra
 Dynamic: requires-dist
 Dynamic: summary
 
-EduPlatform
-===========
+# EduPlatform - Local Development Setup
 
-Getting Started
----------------
+Dokumentasi ini menjelaskan cara menjalankan aplikasi EduPlatform di komputer lokal (Local Environment). Aplikasi ini dibangun menggunakan **Python (Pyramid Framework)** dan menggunakan database **PostgreSQL (Neon Console)**.
 
-- Change directory into your newly created project.
+## 📋 Prasyarat (Prerequisites)
 
-    cd eduplatform
+Pastikan tools berikut sudah terinstall di komputermu:
 
-- Create a Python virtual environment.
+1.  **Python 3.10+** (Disarankan Python 3.11 atau 3.12 untuk stabilitas).
+2.  **Git** (Untuk clone repository).
+3.  **Virtual Environment** (Bawaan Python).
 
-    python3 -m venv env
+## 🚀 Instalasi & Setup
 
-- Upgrade packaging tools.
+Ikuti langkah-langkah berikut secara berurutan di terminal (CMD/PowerShell/Terminal).
 
-    env/bin/pip install --upgrade pip setuptools
+### 1. Clone Repository
+```bash
+git clone [https://github.com/username-kamu/eduplatform.git](https://github.com/username-kamu/eduplatform.git)
+cd eduplatform
+```
 
-- Install the project in editable mode with its testing requirements.
+### 2. Buat & Aktifkan Virtual Environment
+Sangat disarankan menggunakan virtual environment agar library tidak bentrok.
 
-    env/bin/pip install -e ".[testing]"
+Windows:
+```bash
+python -m venv env
+.\env\Scripts\activate
+```
+Mac/Linux:
+```bash
+python3 -m venv env
+source env/bin/activate
+```
 
-- Initialize and upgrade the database using Alembic.
+### 3. Install Dependencies 
+Install paket utama aplikasi dalam mode editable dan library pendukung (Database & Cloudinary).
+```bash
+# Install aplikasi dalam mode development
+pip install -e .
 
-    - Generate your first revision.
+# Install driver database (PostgreSQL) untuk Windows
+pip install psycopg2-binary
 
-        env/bin/alembic -c development.ini revision --autogenerate -m "init"
+# Install library Cloudinary untuk upload gambar
+pip install cloudinary
+```
+(Opsional: Jika ada file requirements.txt)
 
-    - Upgrade to that revision.
+```bash 
+pip install -r requirements.txt
+```
 
-        env/bin/alembic -c development.ini upgrade head
+### 4. Konfigurasi Environment (development.ini)
+Buka file development.ini. Pastikan konfigurasi berikut sudah sesuai:
+```bash
+sqlalchemy.url = postgresql://user:password@endpoint-neon.tech/dbname?sslmode=require
+#Konfigurasi Server (Agar akses lancar di localhost) Ubah bagian [server:main] agar menggunakan IPv4:
+[server:main]
+use = egg:waitress#main
+listen = 127.0.0.1:8080
+```
 
-- Load default data into the database using a script.
+### ▶️ Menjalankan Aplikasi
+Setelah semua terinstall, jalankan perintah berikut:
+diterminal root:
+```bash 
+pserve development.ini --reload
+```
+Jika sukses, terminal akan menampilkan: Serving on http://127.0.0.1:8080
 
-    env/bin/initialize_eduplatform_db development.ini
+Buka browser dan akses: http://localhost:8080
 
-- Run your project's tests.
+### Frontend 
+https://uas-paw-kelompok6-eduplatform.vercel.app/
 
-    env/bin/pytest
-
-- Run your project.
-
-    env/bin/pserve development.ini
 
 
 0.0
