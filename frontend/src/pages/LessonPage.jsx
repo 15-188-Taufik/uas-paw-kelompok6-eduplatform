@@ -3,26 +3,42 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const LessonPage = () => {
-  const { id } = useParams(); // Ambil ID lesson
+  const { id } = useParams(); // ID Lesson
   const navigate = useNavigate();
   
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isCompleted, setIsCompleted] = useState(false); // State baru untuk status selesai
+  
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    const fetchLesson = async () => {
+    const fetchLessonData = async () => {
       try {
-        const response = await api.get(`/lessons/${id}`);
-        setLesson(response.data.lesson);
+        setLoading(true);
+        // 1. Ambil Detail Lesson
+        const res = await api.get(`/lessons/${id}`);
+        setLesson(res.data.lesson);
+
+        // 2. Cek apakah user sudah menyelesaikan lesson ini?
+        // (Kita perlu endpoint khusus atau cek manual, 
+        //  tapi untuk simpel, kita coba hit endpoint complete. 
+        //  Jika return "Already completed", berarti sudah selesai)
+        if (user) {
+            // Cara tricky tanpa buat endpoint baru: 
+            // Coba post complete, backend saya sudah buat agar tidak error kalau duplikat.
+            // Tapi idealnya nanti buat endpoint GET /lessons/{id}/status.
+            // Untuk sekarang, kita biarkan default false dulu,
+            // nanti tombol akan berubah setelah diklik.
+        }
       } catch (err) {
         console.error("Gagal load lesson:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchLesson();
-  }, [id]);
+    fetchLessonData();
+  }, [id, user?.id]);
 
   const handleComplete = async () => {
     if (!user) return;
@@ -30,87 +46,95 @@ const LessonPage = () => {
       await api.post(`/lessons/${id}/complete`, {
         student_id: user.id
       });
-      alert("Selamat! Materi selesai.");
-      // Bisa tambahkan logika navigasi ke materi selanjutnya di sini
+      
+      // Update UI jadi selesai
+      setIsCompleted(true);
+      alert("Selamat! Materi selesai. Progress Anda telah diperbarui.");
+      
+      // Opsional: Balik ke dashboard atau materi lain
+      // navigate('/student-dashboard');
+      
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Helper: Ubah link Youtube biasa jadi Embed
+  // Helper: Embed Youtube
   const getEmbedUrl = (url) => {
     if (!url) return null;
     if (url.includes('youtube.com/watch?v=')) {
       return url.replace('watch?v=', 'embed/');
+    } else if (url.includes('youtu.be/')) {
+      return url.replace('youtu.be/', 'youtube.com/embed/');
     }
-    if (url.includes('youtu.be/')) {
-      const videoId = url.split('/').pop();
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
-    return url;
+    return url; 
   };
 
-  if (loading) return <p style={{textAlign:'center', marginTop: '50px'}}>Memuat materi...</p>;
-  if (!lesson) return <p style={{textAlign:'center', marginTop: '50px'}}>Materi tidak ditemukan.</p>;
+  if (loading) return <div className="text-center p-5">Memuat materi...</div>;
+  if (!lesson) return <div className="text-center p-5">Materi tidak ditemukan.</div>;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       
-      {/* Tombol Kembali */}
       <button 
         onClick={() => navigate(-1)} 
-        style={{ marginBottom: '20px', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1rem' }}
+        style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', marginBottom: '20px', display:'flex', alignItems:'center', gap:'5px' }}
       >
-        ← Kembali ke Silabus
+        ← Kembali
       </button>
 
-      {/* Judul */}
-      <h1 style={{ color: '#333' }}>{lesson.title}</h1>
-
-      {/* Video Player */}
-      {lesson.video_url && (
-        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '8px', marginBottom: '30px', backgroundColor: '#000' }}>
-          <iframe 
-            src={getEmbedUrl(lesson.video_url)} 
-            title={lesson.title}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-            frameBorder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowFullScreen
-          />
-        </div>
-      )}
-
-      {/* Konten Teks */}
-      <div style={{ lineHeight: '1.8', fontSize: '1.1rem', color: '#444', marginBottom: '40px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-        {lesson.content_text ? (
-          lesson.content_text.split('\n').map((par, idx) => (
-            <p key={idx}>{par}</p>
-          ))
-        ) : (
-          <p>Tidak ada konten teks.</p>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '10px' }}>{lesson.title}</h1>
+      
+      <div style={{ marginBottom: '30px' }}>
+        {lesson.video_url && (
+            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '12px', backgroundColor: '#000', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+            <iframe 
+                src={getEmbedUrl(lesson.video_url)} 
+                title={lesson.title}
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowFullScreen
+            />
+            </div>
         )}
       </div>
 
-      {/* Tombol Selesai */}
+      <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', lineHeight: '1.8', fontSize: '1.1rem', color: '#333', marginBottom: '40px' }}>
+        {lesson.content_text ? (
+          lesson.content_text.split('\n').map((par, idx) => (
+            <p key={idx} style={{ marginBottom: '1rem' }}>{par}</p>
+          ))
+        ) : (
+          <p className="text-muted">Tidak ada deskripsi teks.</p>
+        )}
+      </div>
+
+      {/* TOMBOL SELESAI */}
       <div style={{ textAlign: 'center', marginBottom: '50px' }}>
         <button 
           onClick={handleComplete}
+          disabled={isCompleted}
           style={{ 
-            padding: '15px 40px', 
-            fontSize: '1.2rem', 
-            backgroundColor: '#28a745', 
+            padding: '16px 40px', 
+            fontSize: '1.1rem', 
+            backgroundColor: isCompleted ? '#10b981' : '#2563eb', // Hijau jika selesai, Biru jika belum
             color: 'white', 
             border: 'none', 
             borderRadius: '50px', 
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            cursor: isCompleted ? 'default' : 'pointer',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            transition: 'all 0.3s ease'
           }}
         >
-          ✅ Tandai Selesai
+          {isCompleted ? (
+            <span><i className="bi bi-check-circle-fill me-2"></i> Materi Selesai</span>
+          ) : (
+            <span>Tandai Selesai <i className="bi bi-arrow-right ms-2"></i></span>
+          )}
         </button>
       </div>
-
     </div>
   );
 };

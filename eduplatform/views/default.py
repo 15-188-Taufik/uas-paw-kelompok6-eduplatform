@@ -373,7 +373,7 @@ def update_assignment(request):
         print(f"Error update assignment: {e}")
         return HTTPBadRequest(json_body={'error': str(e)})
 
-        
+
 @view_config(route_name='assignment_detail', renderer='json', request_method='DELETE')
 def delete_assignment(request):
     assign_id = request.matchdict['id']
@@ -532,9 +532,67 @@ def get_my_courses(request):
     user = request.dbsession.query(User).get(student_id)
     if not user:
         return HTTPNotFound(json_body={'error': 'User not found'})
+    
     my_courses_list = []
     for enrollment in user.enrollments:
-        my_courses_list.append(enrollment.course.to_dict())
+        course = enrollment.course
+        course_data = course.to_dict()
+
+        # ==========================================
+        # LOGIKA PROGRES (MATERI + TUGAS)
+        # ==========================================
+        
+        # 1. Hitung Total Item (Materi + Tugas)
+        total_lessons = request.dbsession.query(Lesson)\
+            .join(Module)\
+            .filter(Module.course_id == course.id)\
+            .count()
+            
+        total_assignments = request.dbsession.query(Assignment)\
+            .join(Module)\
+            .filter(Module.course_id == course.id)\
+            .count()
+            
+        total_items = total_lessons + total_assignments
+
+        # 2. Hitung Item Selesai (Materi Selesai + Tugas Disubmit)
+        
+        # A. Materi yang ditandai selesai
+        completed_lessons = request.dbsession.query(LessonCompletion)\
+            .join(Lesson)\
+            .join(Module)\
+            .filter(
+                LessonCompletion.student_id == student_id,
+                Module.course_id == course.id
+            ).count()
+            
+        # B. Tugas yang sudah ada Submission-nya
+        # Gunakan distinct() agar multiple submission pada 1 tugas tetap dihitung 1
+        completed_assignments = request.dbsession.query(Submission.assignment_id)\
+            .join(Assignment)\
+            .join(Module)\
+            .filter(
+                Submission.student_id == student_id,
+                Module.course_id == course.id
+            )\
+            .distinct()\
+            .count()
+            
+        completed_items = completed_lessons + completed_assignments
+            
+        # 3. Kalkulasi Persentase
+        if total_items > 0:
+            progress = (completed_items / total_items) * 100
+        else:
+            progress = 0
+            
+        # Masukkan ke data response (bulatkan 1 desimal)
+        course_data['progress'] = round(progress, 1) 
+        
+        # ==========================================
+
+        my_courses_list.append(course_data)
+        
     return {'courses': my_courses_list}
 
 @view_config(route_name='complete_lesson', renderer='json', request_method='POST')
