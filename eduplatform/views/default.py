@@ -139,7 +139,7 @@ def create_module(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 4. LESSONS (CRUD LENGKAP)
+# 4. LESSONS (CRUD LENGKAP - PERBAIKAN JSON/POST)
 # ==========================================
 
 @view_config(route_name='lessons', renderer='json', request_method='GET')
@@ -162,15 +162,26 @@ def get_lesson_detail(request):
 def create_lesson(request):
     module_id = request.matchdict['module_id']
     try:
-        title = request.POST.get('title')
-        content_text = request.POST.get('content_text')
-        video_url = request.POST.get('video_url')
-        
-        is_preview_raw = request.POST.get('is_preview', 'false')
-        is_preview = is_preview_raw.lower() == 'true'
-        sort_order = int(request.POST.get('sort_order', 0))
+        # [FIX] Handle JSON vs Form Data
+        try:
+            data = request.json_body
+        except:
+            data = request.POST
 
-        input_file = request.POST.get('file_material')
+        title = data.get('title')
+        content_text = data.get('content_text')
+        video_url = data.get('video_url')
+        
+        is_preview_raw = data.get('is_preview', 'false')
+        if isinstance(is_preview_raw, bool):
+            is_preview = is_preview_raw
+        else:
+            is_preview = is_preview_raw.lower() == 'true'
+            
+        sort_order = int(data.get('sort_order', 0))
+
+        # Handle File Upload (hanya ada di request.POST)
+        input_file = request.POST.get('file_material') if 'file_material' in request.POST else None
         
         if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
             upload_result = cloudinary.uploader.upload(
@@ -205,26 +216,32 @@ def update_lesson(request):
         if not lesson:
             return HTTPNotFound(json_body={'error': 'Lesson not found'})
 
+        # [FIX] Handle JSON vs Form Data
         try:
             data = request.json_body
-            if 'title' in data: lesson.title = data['title']
-            if 'content_text' in data: lesson.content_text = data['content_text']
-            if 'video_url' in data: lesson.video_url = data['video_url']
-            if 'is_preview' in data: lesson.is_preview = data['is_preview']
         except:
-            if request.POST.get('title'): lesson.title = request.POST.get('title')
-            if request.POST.get('content_text'): lesson.content_text = request.POST.get('content_text')
-            
-            input_file = request.POST.get('file_material')
-            if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
-                 upload_result = cloudinary.uploader.upload(
-                    input_file.file, 
-                    folder="eduplatform/lessons", 
-                    resource_type="auto"
-                )
-                 lesson.video_url = upload_result.get("secure_url")
-            elif request.POST.get('video_url'):
-                 lesson.video_url = request.POST.get('video_url')
+            data = request.POST
+
+        if data.get('title'): lesson.title = data.get('title')
+        if data.get('content_text'): lesson.content_text = data.get('content_text')
+        if data.get('video_url'): lesson.video_url = data.get('video_url')
+        
+        is_preview_raw = data.get('is_preview')
+        if is_preview_raw is not None:
+             if isinstance(is_preview_raw, bool):
+                lesson.is_preview = is_preview_raw
+             else:
+                lesson.is_preview = is_preview_raw.lower() == 'true'
+
+        # Handle File Upload Update
+        input_file = request.POST.get('file_material') if 'file_material' in request.POST else None
+        if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
+                upload_result = cloudinary.uploader.upload(
+                input_file.file, 
+                folder="eduplatform/lessons", 
+                resource_type="auto"
+            )
+                lesson.video_url = upload_result.get("secure_url")
 
         request.dbsession.add(lesson)
         return {'success': True, 'message': 'Lesson updated', 'lesson': lesson.to_dict()}
@@ -246,7 +263,7 @@ def delete_lesson(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 5. ASSIGNMENTS (CRUD LENGKAP + DUE DATE)
+# 5. ASSIGNMENTS (CRUD LENGKAP + FILE/LINK)
 # ==========================================
 
 @view_config(route_name='assignments', renderer='json', request_method='GET')
@@ -259,7 +276,9 @@ def get_assignments(request):
             'id': a.id,
             'title': a.title,
             'description': a.description,
-            'due_date': str(a.due_date) if a.due_date else None # Kirim Due Date
+            'due_date': str(a.due_date) if a.due_date else None,
+            'attachment_url': a.attachment_url,
+            'link_url': a.link_url
         })
     return {'assignments': results}
 
@@ -273,7 +292,9 @@ def get_assignment_detail(request):
         'id': assign.id,
         'title': assign.title,
         'description': assign.description,
-        'due_date': str(assign.due_date) if assign.due_date else None, # Kirim Due Date
+        'due_date': str(assign.due_date) if assign.due_date else None,
+        'attachment_url': assign.attachment_url,
+        'link_url': assign.link_url,
         'module_id': assign.module_id
     }}
 
@@ -281,17 +302,16 @@ def get_assignment_detail(request):
 def create_assignment(request):
     module_id = request.matchdict['module_id']
     try:
-        # Cek apakah request berupa JSON atau Multipart (Form Data)
+        # Handle JSON vs POST
         try:
             data = request.json_body
         except:
-            data = request.POST # Fallback ke POST params jika upload file
+            data = request.POST
 
         title = data.get('title')
         description = data.get('description')
         link_url = data.get('link_url')
         
-        # Upload File (Jika ada)
         attachment_url = None
         input_file = request.POST.get('attachment_file') if 'attachment_file' in request.POST else None
         
@@ -303,7 +323,6 @@ def create_assignment(request):
             )
             attachment_url = upload_result.get("secure_url")
 
-        # Proses Due Date
         due_date_str = data.get('due_date')
         due_date_obj = None
         if due_date_str and due_date_str != 'null':
@@ -328,7 +347,7 @@ def create_assignment(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 @view_config(route_name='assignment_detail', renderer='json', request_method='PUT')
-@view_config(route_name='assignment_detail', renderer='json', request_method='POST') # Support POST untuk update file
+@view_config(route_name='assignment_detail', renderer='json', request_method='POST')
 def update_assignment(request):
     assign_id = request.matchdict['id']
     try:
@@ -336,7 +355,6 @@ def update_assignment(request):
         if not assign:
             return HTTPNotFound(json_body={'error': 'Assignment not found'})
         
-        # Coba ambil data (JSON atau POST)
         try:
             data = request.json_body
         except:
@@ -346,7 +364,6 @@ def update_assignment(request):
         if data.get('description'): assign.description = data.get('description')
         if 'link_url' in data: assign.link_url = data.get('link_url')
 
-        # Update Due Date
         if 'due_date' in data:
             val = data.get('due_date')
             if val and val != 'null':
@@ -357,7 +374,6 @@ def update_assignment(request):
             else:
                 assign.due_date = None
 
-        # Update File Attachment (Jika ada upload baru)
         input_file = request.POST.get('attachment_file') if 'attachment_file' in request.POST else None
         if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
              upload_result = cloudinary.uploader.upload(
@@ -372,7 +388,6 @@ def update_assignment(request):
     except Exception as e:
         print(f"Error update assignment: {e}")
         return HTTPBadRequest(json_body={'error': str(e)})
-
 
 @view_config(route_name='assignment_detail', renderer='json', request_method='DELETE')
 def delete_assignment(request):
@@ -498,7 +513,7 @@ def grade_submission(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 7. ENROLLMENTS & COMPLETIONS
+# 7. ENROLLMENTS & COMPLETIONS (PROGRESS LENGKAP)
 # ==========================================
 
 @view_config(route_name='enroll', renderer='json', request_method='POST')
@@ -555,9 +570,7 @@ def get_my_courses(request):
             
         total_items = total_lessons + total_assignments
 
-        # 2. Hitung Item Selesai (Materi Selesai + Tugas Disubmit)
-        
-        # A. Materi yang ditandai selesai
+        # 2. Hitung Item Selesai
         completed_lessons = request.dbsession.query(LessonCompletion)\
             .join(Lesson)\
             .join(Module)\
@@ -566,8 +579,6 @@ def get_my_courses(request):
                 Module.course_id == course.id
             ).count()
             
-        # B. Tugas yang sudah ada Submission-nya
-        # Gunakan distinct() agar multiple submission pada 1 tugas tetap dihitung 1
         completed_assignments = request.dbsession.query(Submission.assignment_id)\
             .join(Assignment)\
             .join(Module)\
@@ -586,9 +597,7 @@ def get_my_courses(request):
         else:
             progress = 0
             
-        # Masukkan ke data response (bulatkan 1 desimal)
         course_data['progress'] = round(progress, 1) 
-        
         # ==========================================
 
         my_courses_list.append(course_data)
