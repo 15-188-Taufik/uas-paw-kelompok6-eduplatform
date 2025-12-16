@@ -28,7 +28,7 @@ cloudinary.config(
 )
 
 # ==========================================
-# 0. CORS OPTIONS HANDLER
+# 1. CORS OPTIONS HANDLER
 # ==========================================
 @view_config(route_name='register', request_method='OPTIONS')
 @view_config(route_name='login', request_method='OPTIONS')
@@ -49,7 +49,7 @@ def options_view(request):
     return Response(body='', status=200, content_type='text/plain')
 
 # ==========================================
-# 1. USERS
+# 2. USERS
 # ==========================================
 
 @view_config(route_name='users', renderer='json', request_method='GET')
@@ -58,7 +58,7 @@ def get_users(request):
     return {'users': [u.to_dict() for u in users]}
 
 # ==========================================
-# 2. COURSES
+# 3. COURSES
 # ==========================================
 
 @view_config(route_name='courses', renderer='json', request_method='GET')
@@ -113,7 +113,7 @@ def create_course(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 3. MODULES
+# 4. MODULES
 # ==========================================
 
 @view_config(route_name='modules', renderer='json', request_method='GET')
@@ -139,7 +139,7 @@ def create_module(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 4. LESSONS (CRUD LENGKAP - PERBAIKAN JSON/POST)
+# 5. LESSONS (CRUD LENGKAP - PERBAIKAN JSON/POST)
 # ==========================================
 
 @view_config(route_name='lessons', renderer='json', request_method='GET')
@@ -263,7 +263,7 @@ def delete_lesson(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 5. ASSIGNMENTS (CRUD LENGKAP + FILE/LINK)
+# 6. ASSIGNMENTS (CRUD LENGKAP + FILE/LINK)
 # ==========================================
 
 @view_config(route_name='assignments', renderer='json', request_method='GET')
@@ -403,7 +403,7 @@ def delete_assignment(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 6. SUBMISSIONS & GRADING
+# 7. SUBMISSIONS & GRADING
 # ==========================================
 
 @view_config(route_name='my_submission', renderer='json', request_method='GET')
@@ -513,7 +513,7 @@ def grade_submission(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 7. ENROLLMENTS & COMPLETIONS (PROGRESS LENGKAP)
+# 8. ENROLLMENTS & COMPLETIONS (PROGRESS LENGKAP)
 # ==========================================
 
 @view_config(route_name='enroll', renderer='json', request_method='POST')
