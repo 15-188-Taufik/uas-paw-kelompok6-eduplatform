@@ -10,16 +10,43 @@ const Navbar = () => {
     navigate('/login');
   };
 
+  const themeColor = '#FF7E3E';
+
   const isActive = (path) => {
-    return location.pathname === path ? 'active fw-bold text-primary' : 'text-dark';
+    return location.pathname === path ? 'fw-bold' : '';
+  };
+
+  const activeLinkStyle = (path) => {
+    return {
+      color: location.pathname === path ? themeColor : '#2D2D2D',
+      fontSize: '15px'
+    };
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top border-bottom shadow-sm">
+    <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top border-bottom shadow-sm" style={{ padding: '10px 0' }}>
       <div className="container">
-        {/* LOGO */}
-        <Link className="navbar-brand fw-bold fs-4 text-primary d-flex align-items-center gap-2" to="/">
-          <i className="bi bi-mortarboard-fill"></i> EduPlatform
+        
+        {/* LOGO & BRAND */}
+        <Link 
+          className="navbar-brand d-flex align-items-center gap-2" 
+          to="/" 
+          style={{ textDecoration: 'none' }}
+        >
+          {/* PERBAIKAN DI SINI: Panggil langsung nama filenya dari folder public */}
+          <img 
+            src="/Logoedu.png" 
+            alt="Logo Edu" 
+            style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} 
+          />
+          <span style={{ 
+            color: themeColor, 
+            fontWeight: '800', 
+            fontSize: '22px', 
+            letterSpacing: '-0.5px' 
+          }}>
+            EduPlatform
+          </span>
         </Link>
         
         <button 
@@ -33,71 +60,53 @@ const Navbar = () => {
         
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav ms-auto align-items-center gap-lg-4 gap-2 mt-3 mt-lg-0">
-            
-            {/* 1. Menu Global */}
             <li className="nav-item">
-              <Link className={`nav-link ${isActive('/')}`} to="/">
+              <Link className={`nav-link ${isActive('/')}`} to="/" style={activeLinkStyle('/')}>
                 Beranda
               </Link>
             </li>
 
             {user ? (
               <>
-                {/* --- MENU KHUSUS SISWA (Tampilkan Keduanya) --- */}
                 {user.role === 'student' && (
                   <>
-                    {/* Menu 1: Kursus Saya (Daftar pelajaran) */}
                     <li className="nav-item">
-                        <Link className={`nav-link ${isActive('/my-courses')}`} to="/my-courses">
-                        Kursus Saya
+                        <Link className={`nav-link ${isActive('/my-courses')}`} to="/my-courses" style={activeLinkStyle('/my-courses')}>
+                          Kursus Saya
                         </Link>
                     </li>
-
-                    {/* Menu 2: Dashboard (Statistik & Jadwal) */}
                     <li className="nav-item">
-                        <Link className={`nav-link ${isActive('/student-dashboard')}`} to="/student-dashboard">
-                        Dashboard
+                        <Link className={`nav-link ${isActive('/student-dashboard')}`} to="/student-dashboard" style={activeLinkStyle('/student-dashboard')}>
+                          Dashboard
                         </Link>
                     </li>
                   </>
                 )}
 
-                {/* --- MENU KHUSUS INSTRUKTUR --- */}
-                {/* Menu Khusus INSTRUKTUR */}
                 {user.role === 'instructor' && (
                   <>
                     <li className="nav-item">
-                      <Link className={`nav-link ${isActive('/instructor-dashboard')}`} to="/instructor-dashboard">
+                      <Link className={`nav-link ${isActive('/instructor-dashboard')}`} to="/instructor-dashboard" style={activeLinkStyle('/instructor-dashboard')}>
                         Dashboard
                       </Link>
                     </li>
                     <li className="nav-item">
-                      {/* Tombol ini sekarang membuka halaman Manajemen Kursus */}
-                      <Link className={`nav-link ${isActive('/instructor-courses')}`} to="/instructor-courses">
+                      <Link className={`nav-link ${isActive('/instructor-courses')}`} to="/instructor-courses" style={activeLinkStyle('/instructor-courses')}>
                         Manajemen Kursus
                       </Link>
                     </li>
                   </>
                 )}
-                {/* Divider */}
+                
                 <li className="nav-item d-none d-lg-block text-muted">|</li>
 
-                {/* Profil Dropdown */}
                 <li className="nav-item dropdown">
-                  <a 
-                    className="nav-link dropdown-toggle d-flex align-items-center gap-2" 
-                    href="#" 
-                    role="button" 
-                    data-bs-toggle="dropdown" 
-                    aria-expanded="false"
-                  >
-                    <div className="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center" style={{width: '32px', height: '32px', fontSize: '14px'}}>
+                  <a className="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div className="text-white rounded-circle d-flex justify-content-center align-items-center fw-bold" style={{ width: '36px', height: '36px', backgroundColor: themeColor, fontSize: '14px' }}>
                       {user.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="d-lg-none d-inline-block fw-bold">{user.name}</span>
                   </a>
-                  
-                  <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 mt-2">
+                  <ul className="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
                     <li><span className="dropdown-header">Halo, <strong>{user.name}</strong></span></li>
                     <li><hr className="dropdown-divider" /></li>
                     <li>
@@ -109,17 +118,12 @@ const Navbar = () => {
                 </li>
               </>
             ) : (
-              /* --- MENU TAMU (Belum Login) --- */
-              <>
-                <li className="nav-item">
-                  <Link className="nav-link fw-bold text-dark" to="/login">Masuk</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="btn btn-primary rounded-pill px-4 fw-bold" to="/register">Daftar Sekarang</Link>
-                </li>
-              </>
+              <li className="nav-item">
+                <Link className="btn px-4 fw-bold shadow-sm text-white" to="/login" style={{ backgroundColor: themeColor, borderRadius: '12px', padding: '10px 25px' }}>
+                  Masuk
+                </Link>
+              </li>
             )}
-            
           </ul>
         </div>
       </div>

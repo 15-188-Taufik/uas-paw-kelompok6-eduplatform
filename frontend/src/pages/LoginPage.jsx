@@ -10,6 +10,7 @@ const LoginPage = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     try {
       const response = await api.post('/login', { email, password });
       if (response.data.success) {
@@ -18,81 +19,151 @@ const LoginPage = () => {
         navigate(target);
       }
     } catch (err) {
-      // ... di dalam handleLogin
-try {
-  const response = await api.post('/login', { email, password });
-  // ... (kode sukses)
-} catch (err) {
-  console.error(err); // Lihat detail error di Console Browser (F12)
-
-  if (err.response) {
-    // Jika server merespon dengan kode error (misal 401 Unauthorized)
-    if (err.response.status === 401) {
-         setError('Password atau Email salah.');
-    } else {
-         setError(`Terjadi kesalahan: ${err.response.data.error || err.response.statusText}`);
-    }
-  } else if (err.request) {
-    // Jika tidak ada respon dari server (Backend mati?)
-    setError('Gagal terhubung ke server. Pastikan Backend berjalan.');
-  } else {
-    setError('Terjadi kesalahan sistem.');
-  }
-}
+      console.error(err);
+      if (err.response) {
+        if (err.response.status === 401) {
+          setError('Password atau Email salah.');
+        } else {
+          setError(`Terjadi kesalahan: ${err.response.data.error || err.response.statusText}`);
+        }
+      } else if (err.request) {
+        setError('Gagal terhubung ke server. Pastikan Backend berjalan.');
+      } else {
+        setError('Terjadi kesalahan sistem.');
+      }
     }
   };
 
+  // Tema Warna Focotech
+  const colors = {
+    primary: '#FF7E3E',
+    background: '#FDF8F4',
+    white: '#FFFFFF',
+    textDark: '#2D2D2D',
+    textLight: '#7A7A7A',
+    border: '#EAEAEA'
+  };
+
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100" style={{ backgroundColor: '#f3f4f6' }}>
-      <div className="card-modern p-4 p-md-5" style={{ maxWidth: '450px', width: '100%' }}>
-        <div className="text-center mb-4">
-          <h3 className="fw-bold text-dark">Selamat Datang Kembali</h3>
-          <p className="text-muted">Silakan masuk ke akun Anda</p>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: colors.background, 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: '20px',
+      fontFamily: "'Inter', 'Segoe UI', sans-serif" 
+    }}>
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '450px', 
+        backgroundColor: colors.white, 
+        padding: '40px', 
+        borderRadius: '24px', 
+        boxShadow: '0 10px 25px rgba(255, 126, 62, 0.05)',
+        border: `1px solid ${colors.border}`
+      }}>
+        
+        {/* Header Logo & Title */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <img 
+              src="/Logoedu.png" 
+              alt="Logo Edu" 
+              style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} 
+            />
+          </div>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.textDark, margin: '0' }}>Selamat Datang Kembali</h2>
+          <p style={{ color: colors.textLight, marginTop: '8px', fontSize: '14px' }}>Silakan masuk ke akun Anda</p>
         </div>
 
-        {error && <div className="alert alert-danger py-2 small border-0 bg-danger-subtle text-danger">{error}</div>}
+        {error && (
+          <div style={{ 
+            backgroundColor: '#FFF1F0', 
+            color: '#E03131', 
+            padding: '12px', 
+            borderRadius: '12px', 
+            marginBottom: '20px', 
+            fontSize: '13px',
+            border: '1px solid #FFA8A8',
+            textAlign: 'center'
+          }}>
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleLogin}>
-          <div className="mb-3">
-            <label className="form-label small fw-bold text-secondary">EMAIL</label>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '13px', color: colors.textDark }}>EMAIL</label>
             <input 
               type="email" 
-              className="form-control" 
+              className="form-control"
               placeholder="nama@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              style={inputStyle(colors)}
             />
           </div>
 
-          <div className="mb-4">
-            <div className="d-flex justify-content-between">
-                <label className="form-label small fw-bold text-secondary">PASSWORD</label>
-                <a href="#" className="small text-decoration-none" style={{color: 'var(--primary-color)'}}>Lupa Password?</a>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label style={{ fontWeight: '600', fontSize: '13px', color: colors.textDark }}>PASSWORD</label>
+              <a href="#" style={{ fontSize: '12px', color: colors.primary, textDecoration: 'none', fontWeight: '600' }}>Lupa Password?</a>
             </div>
             <input 
               type="password" 
-              className="form-control" 
+              className="form-control"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              style={inputStyle(colors)}
             />
           </div>
 
-          <button type="submit" className="btn btn-primary w-100 py-2 fs-6">
+          <button 
+            type="submit" 
+            style={{ 
+              padding: '14px', 
+              backgroundColor: colors.primary, 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '14px', 
+              fontSize: '16px', 
+              fontWeight: '700', 
+              cursor: 'pointer',
+              marginTop: '10px',
+              transition: 'all 0.2s ease',
+              boxShadow: `0 8px 20px rgba(255, 126, 62, 0.2)`
+            }}
+            onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+            onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+          >
             Masuk
           </button>
         </form>
 
-        <div className="text-center mt-4">
-          <small className="text-muted">
-            Belum punya akun? <Link to="/register" className="fw-bold text-decoration-none" style={{ color: 'var(--primary-color)' }}>Buat Akun Baru</Link>
+        <div style={{ textAlign: 'center', marginTop: '24px' }}>
+          <small style={{ color: colors.textLight, fontSize: '14px' }}>
+            Belum punya akun? <Link to="/register" style={{ color: colors.primary, textDecoration: 'none', fontWeight: '700' }}>Buat Akun Baru</Link>
           </small>
         </div>
       </div>
     </div>
   );
 };
+
+// Helper style untuk input
+const inputStyle = (colors) => ({
+  width: '100%', 
+  padding: '12px 16px', 
+  borderRadius: '12px', 
+  border: `1.5px solid ${colors.border}`, 
+  fontSize: '14px',
+  outline: 'none',
+  backgroundColor: '#FAFAFA',
+  boxSizing: 'border-box'
+});
 
 export default LoginPage;

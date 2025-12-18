@@ -7,12 +7,11 @@ const RegisterPage = () => {
     name: '',
     email: '',
     password: '',
-    role: 'student' // Default role kita set ke student
+    role: 'student'
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  // Fungsi untuk menangani perubahan input form
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -20,113 +19,176 @@ const RegisterPage = () => {
     });
   };
 
-  // Fungsi saat tombol daftar diklik
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError(''); // Reset error sebelum mencoba
-    
+    setError('');
     try {
-      // Mengirim data ke Backend: POST /api/register
       const response = await api.post('/register', formData);
-      
       if (response.data.success) {
-        alert('Registrasi Berhasil! Silakan Login dengan akun baru Anda.');
-        navigate('/login'); // Arahkan pengguna ke halaman login
+        alert('Registrasi Berhasil! Silakan Login.');
+        navigate('/login');
       }
     } catch (err) {
-      console.error(err);
-      // Tampilkan pesan error dari backend jika ada, atau pesan umum
       setError(err.response?.data?.error || 'Registrasi Gagal! Silakan coba lagi.');
     }
   };
 
+  const colors = {
+    primary: '#FF7E3E',
+    background: '#FDF8F4',
+    white: '#FFFFFF',
+    textDark: '#2D2D2D',
+    textLight: '#7A7A7A',
+    border: '#EAEAEA'
+  };
+
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <h2 style={{ textAlign: 'center', color: '#bc2131' }}>Daftar Akun Baru</h2>
-      
-      {error && (
-        <div style={{ backgroundColor: '#ffebee', color: '#c62828', padding: '10px', borderRadius: '4px', marginBottom: '15px', fontSize: '0.9rem' }}>
-          {error}
-        </div>
-      )}
-      
-      <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: colors.background, 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      padding: '20px',
+      fontFamily: "'Inter', 'Segoe UI', sans-serif" 
+    }}>
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '450px', 
+        backgroundColor: colors.white, 
+        padding: '40px', 
+        borderRadius: '24px', 
+        boxShadow: '0 10px 25px rgba(0,0,0,0.03)',
+        border: `1px solid ${colors.border}`
+      }}>
         
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Nama Lengkap:</label>
-          <input 
-            type="text" 
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            placeholder="Contoh: Budi Santoso"
-            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-          />
+        {/* Header Logo & Title */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          {/* BAGIAN ICON YANG DIPERBARUI MENJADI LOGO */}
+          <div style={{ marginBottom: '16px' }}>
+            <img 
+              src="/Logoedu.png" 
+              alt="Logo Edu" 
+              style={{ 
+                width: '60px', 
+                height: '60px', 
+                borderRadius: '12px', 
+                objectFit: 'cover' 
+              }} 
+            />
+          </div>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: colors.textDark, margin: '0' }}>Daftar Akun Baru</h2>
+          <p style={{ color: colors.textLight, marginTop: '8px', fontSize: '14px' }}>Mulai perjalanan belajar Anda di Focotech</p>
         </div>
 
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email:</label>
-          <input 
-            type="email" 
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            placeholder="nama@email.com"
-            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-          />
-        </div>
-        
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Password:</label>
-          <input 
-            type="password" 
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            placeholder="Ketik password rahasia..."
-            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Daftar Sebagai:</label>
-          <select 
-            name="role" 
-            value={formData.role} 
-            onChange={handleChange}
-            style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', backgroundColor: 'white' }}
-          >
-            <option value="student">Mahasiswa (Student)</option>
-            <option value="instructor">Instruktur (Dosen)</option>
-          </select>
-        </div>
-        
-        <button 
-          type="submit" 
-          style={{ 
+        {error && (
+          <div style={{ 
+            backgroundColor: '#FFF1F0', 
+            color: '#E03131', 
             padding: '12px', 
-            backgroundColor: '#bc2131', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '4px', 
-            fontSize: '1rem', 
-            fontWeight: 'bold', 
-            cursor: 'pointer',
-            marginTop: '10px'
-          }}
-        >
-          Daftar Sekarang
-        </button>
-      </form>
-      
-      <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '0.9rem' }}>
-        Sudah punya akun? <a href="/login" style={{ color: '#bc2131', textDecoration: 'none', fontWeight: 'bold' }}>Login di sini</a>
-      </p>
+            borderRadius: '12px', 
+            marginBottom: '20px', 
+            fontSize: '13px',
+            border: '1px solid #FFA8A8'
+          }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: colors.textDark }}>Nama Lengkap</label>
+            <input 
+              type="text" 
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Contoh: Budi Santoso"
+              style={inputStyle(colors)}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: colors.textDark }}>Email</label>
+            <input 
+              type="email" 
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="nama@email.com"
+              style={inputStyle(colors)}
+            />
+          </div>
+          
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: colors.textDark }}>Password</label>
+            <input 
+              type="password" 
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Ketik password rahasia..."
+              style={inputStyle(colors)}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: colors.textDark }}>Daftar Sebagai</label>
+            <select 
+              name="role" 
+              value={formData.role} 
+              onChange={handleChange}
+              style={inputStyle(colors)}
+            >
+              <option value="student">Mahasiswa (Student)</option>
+              <option value="instructor">Instruktur (Dosen)</option>
+            </select>
+          </div>
+          
+          <button 
+            type="submit" 
+            style={{ 
+              padding: '14px', 
+              backgroundColor: colors.primary, 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '14px', 
+              fontSize: '16px', 
+              fontWeight: '700', 
+              cursor: 'pointer',
+              marginTop: '10px',
+              transition: 'all 0.2s ease',
+              boxShadow: `0 4px 14px rgba(255, 126, 62, 0.3)`
+            }}
+            onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+            onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+          >
+            Daftar Sekarang
+          </button>
+        </form>
+        
+        <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: colors.textLight }}>
+          Sudah punya akun? <a href="/login" style={{ color: colors.primary, textDecoration: 'none', fontWeight: '700' }}>Login di sini</a>
+        </p>
+      </div>
     </div>
   );
 };
+
+const inputStyle = (colors) => ({
+  width: '100%', 
+  padding: '12px 16px', 
+  borderRadius: '12px', 
+  border: `1.5px solid ${colors.border}`, 
+  boxSizing: 'border-box',
+  fontSize: '14px',
+  outline: 'none',
+  transition: 'border-color 0.2s',
+  backgroundColor: '#F9F9F9'
+});
 
 export default RegisterPage;
