@@ -1,0 +1,1 @@
+web: pip install -e . && initialize_eduplatform_db development.ini && pserve development.ini
