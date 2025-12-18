@@ -5,10 +5,22 @@ import api from '../api/axios';
 const MyCoursesPage = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredCard, setHoveredCard] = useState(null);
   const navigate = useNavigate();
 
   // 1. Ambil data user yang sedang login
   const user = JSON.parse(localStorage.getItem('user'));
+
+  // Tema Warna Focotech
+  const colors = {
+    primary: '#FF7E3E',
+    background: '#FDF8F4',
+    white: '#FFFFFF',
+    textDark: '#2D2D2D',
+    textLight: '#7A7A7A',
+    border: '#EAEAEA',
+    cardShadow: '0 10px 30px rgba(0,0,0,0.04)'
+  };
 
   useEffect(() => {
     // Jika tidak ada user login, tendang ke halaman login
@@ -34,89 +46,234 @@ const MyCoursesPage = () => {
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100" style={{ backgroundColor: '#f3f4f6' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
+      <div style={{ minHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <p style={{ color: colors.primary, fontWeight: '600', fontFamily: 'Poppins' }}>Sedang memuat kursus Anda...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-vh-100 py-5" style={{ backgroundColor: '#f3f4f6' }}>
-      <div className="container">
+    <div style={{ 
+      backgroundColor: colors.background, 
+      minHeight: '100vh', 
+      padding: '40px 20px',
+      fontFamily: "'Poppins', sans-serif"
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        
         {/* Header Section */}
-        <div className="d-flex justify-content-between align-items-center mb-5">
-          <div>
-            <h2 className="fw-bold text-dark mb-1">Kursus Saya</h2>
-            <p className="text-muted mb-0">Lanjutkan pembelajaran Anda, <strong>{user?.name}</strong>.</p>
-          </div>
+        <div style={{ marginBottom: '40px' }}>
+          <h2 style={{ 
+            fontSize: '28px', 
+            fontWeight: '800', 
+            color: colors.textDark, 
+            marginBottom: '10px' 
+          }}>
+            Kursus Saya
+          </h2>
+          <p style={{ color: colors.textLight, marginBottom: 0 }}>
+            Lanjutkan pembelajaran Anda, <strong>{user?.name}</strong>
+          </p>
         </div>
 
         {courses.length === 0 ? (
-          <div className="text-center py-5">
-            <div className="mb-3">
-              <i className="bi bi-journal-x text-muted" style={{ fontSize: '3rem' }}></i>
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '60px 40px', 
+            backgroundColor: colors.white, 
+            borderRadius: '24px',
+            border: `1px solid ${colors.border}`
+          }}>
+            <div style={{ marginBottom: '20px' }}>
+              <i className="bi bi-journal-x" style={{ fontSize: '48px', color: colors.textLight }}></i>
             </div>
-            <h4 className="text-muted">Anda belum terdaftar di kursus apapun.</h4>
-            <p className="text-muted small">Mungkin Anda belum melakukan Enroll atau data belum tersinkronisasi.</p>
-            <button className="btn btn-primary mt-3 px-4 rounded-pill" onClick={() => navigate('/')}>
+            <h4 style={{ color: colors.textDark, fontWeight: '700', marginBottom: '10px' }}>
+              Anda belum terdaftar di kursus apapun
+            </h4>
+            <p style={{ color: colors.textLight, marginBottom: '30px' }}>
+              Mulai belajar dengan mengeksplorasi kursus-kursus menarik kami
+            </p>
+            <button 
+              onClick={() => navigate('/')}
+              style={{
+                backgroundColor: colors.primary,
+                color: 'white',
+                border: 'none',
+                padding: '12px 30px',
+                borderRadius: '50px',
+                fontWeight: '600',
+                fontSize: '16px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(255, 126, 62, 0.3)',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Poppins'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 16px rgba(255, 126, 62, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 12px rgba(255, 126, 62, 0.3)';
+              }}
+            >
               Cari Kursus Baru
             </button>
           </div>
         ) : (
-          <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+          <div style={{ 
+            display: 'grid', 
+            gap: '30px', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' 
+          }}>
             {courses.map((course) => (
-              <div className="col" key={course.id}>
-                <div className="card-modern h-100 d-flex flex-column">
-                  {/* Thumbnail Kursus */}
-                  <div className="position-relative">
-                    <img 
-                      src={course.thumbnail_url || 'https://via.placeholder.com/400x200?text=No+Image'} 
-                      className="card-img-top" 
-                      alt={course.title} 
-                      style={{ height: '180px', objectFit: 'cover', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}
-                    />
-                    <div className="position-absolute top-0 end-0 m-3">
-                      <span className="badge bg-white text-primary shadow-sm px-3 py-2 rounded-pill fw-bold">
-                        {course.category || 'Umum'}
-                      </span>
+              <div 
+                key={course.id} 
+                onMouseEnter={() => setHoveredCard(course.id)}
+                onMouseLeave={() => setHoveredCard(null)}
+                style={{ 
+                  backgroundColor: colors.white,
+                  borderRadius: '24px', 
+                  overflow: 'hidden', 
+                  border: `1px solid ${colors.border}`,
+                  boxShadow: hoveredCard === course.id ? '0 15px 35px rgba(255, 126, 62, 0.15)' : colors.cardShadow,
+                  transition: 'all 0.3s ease',
+                  transform: hoveredCard === course.id ? 'translateY(-5px)' : 'translateY(0)',
+                  cursor: 'pointer',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  fontFamily: 'Poppins'
+                }}
+              >
+                
+                {/* Image Container with Rounded Corners */}
+                <div style={{ 
+                  borderRadius: '16px', 
+                  overflow: 'hidden', 
+                  height: '200px', 
+                  marginBottom: '20px',
+                  position: 'relative'
+                }}>
+                  <img 
+                    src={course.thumbnail_url || 'https://via.placeholder.com/300x200?text=No+Image'} 
+                    alt={course.title} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover'
+                    }}
+                  />
+                  {/* Category Tag Overlay */}
+                  <span style={{ 
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    color: colors.primary,
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    backdropFilter: 'blur(4px)',
+                    fontFamily: 'Poppins'
+                  }}>
+                    {course.category || 'Umum'}
+                  </span>
+                </div>
+                
+                {/* Content */}
+                <div style={{ padding: '0 5px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ 
+                    margin: '0 0 10px 0', 
+                    fontSize: '18px', 
+                    fontWeight: '700', 
+                    color: colors.textDark,
+                    lineHeight: '1.4',
+                    fontFamily: 'Poppins'
+                  }}>
+                    {course.title}
+                  </h3>
+                  
+                  <p style={{ 
+                    color: colors.textLight, 
+                    fontSize: '14px', 
+                    marginBottom: '12px',
+                    fontFamily: 'Poppins'
+                  }}>
+                    <i className="bi bi-person-circle me-1"></i> {course.instructor_name || 'Instruktur'}
+                  </p>
+
+                  {/* Progress Bar Section */}
+                  <div style={{ marginBottom: '20px', marginTop: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <small style={{ color: colors.textLight, fontWeight: '600', fontFamily: 'Poppins' }}>Progress</small>
+                      <small style={{ color: colors.primary, fontWeight: '700', fontFamily: 'Poppins' }}>
+                        {course.progress ? Math.round(course.progress) : 0}%
+                      </small>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', borderRadius: '10px', backgroundColor: '#e9ecef', overflow: 'hidden' }}>
+                      <div 
+                        style={{ 
+                          width: `${course.progress || 0}%`, 
+                          height: '100%', 
+                          backgroundColor: colors.primary,
+                          borderRadius: '10px',
+                          transition: 'width 0.3s ease'
+                        }}
+                      ></div>
                     </div>
                   </div>
 
-                  <div className="card-body d-flex flex-column p-4">
-                    <h5 className="card-title fw-bold text-dark mb-2 text-truncate" title={course.title}>
-                      {course.title}
-                    </h5>
-                    <p className="text-muted small mb-3">
-                      <i className="bi bi-person-circle me-1"></i> {course.instructor_name || 'Instruktur'}
-                    </p>
-
-                    {/* Progress Bar Section */}
-                    <div className="mt-auto">
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <small className="text-muted fw-semibold">Progress</small>
-                        <small className="text-primary fw-bold">
-                          {course.progress ? Math.round(course.progress) : 0}%
-                        </small>
-                      </div>
-                      <div className="progress mb-3" style={{ height: '8px', borderRadius: '10px', backgroundColor: '#e9ecef' }}>
-                        <div 
-                          className="progress-bar bg-primary" 
-                          role="progressbar" 
-                          style={{ width: `${course.progress || 0}%`, borderRadius: '10px' }}
-                        ></div>
-                      </div>
-
-                      <button 
-                        onClick={() => navigate(`/course/${course.id}`)}
-                        className="btn btn-primary w-100 fw-bold py-2 rounded-3"
-                      >
-                        Lanjutkan Belajar
-                      </button>
+                  {/* Footer Card: Button & Arrow */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/course/${course.id}`);
+                      }}
+                      style={{ 
+                        backgroundColor: colors.primary, 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '10px 20px', 
+                        borderRadius: '12px', 
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(255, 126, 62, 0.3)',
+                        transition: 'all 0.2s ease',
+                        fontFamily: 'Poppins'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      Lanjutkan
+                    </button>
+                    
+                    {/* Arrow Icon Circle */}
+                    <div style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      backgroundColor: '#FFF0E6', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      transform: hoveredCard === course.id ? 'rotate(45deg) scale(1.1)' : 'rotate(0) scale(1)'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
                     </div>
                   </div>
                 </div>
+
               </div>
             ))}
           </div>

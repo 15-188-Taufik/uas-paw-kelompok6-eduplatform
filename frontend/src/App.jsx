@@ -9,16 +9,17 @@ import LessonPage from './pages/LessonPage';
 import AssignmentPage from './pages/AssignmentPage';
 import InstructorDashboard from './pages/InstructorDashboard';
 import CreateCoursePage from './pages/CreateCoursePage';
-import ManageCoursePage from './pages/ManageCoursePage'; // <--- Import Ini
-import GradingPage from './pages/GradingPage'; // Sesuaikan path
+import ManageCoursePage from './pages/ManageCoursePage';
+import GradingPage from './pages/GradingPage';
 import StudentDashboard from './pages/StudentDashboard';
 import InstructorCoursesPage from './pages/InstructorCoursesPage';
+import TimelinePage from './pages/TimelinePage';
 
 function App() {
   return (
     <Router>
       <Navbar />
-      <div style={{ marginTop: '20px', paddingBottom: '50px' }}>
+      <div style={{ marginTop: '5px', paddingBottom: '50px' }}>
         <Routes>
           <Route path="/grading/:assignmentId" element={<GradingPage />} />
           <Route path="/" element={<HomePage />} />
@@ -26,15 +27,14 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/course/:id" element={<CourseDetailPage />} />
           <Route path="/my-courses" element={<MyCoursesPage />} />
+          <Route path="/timeline" element={<TimelinePage />} />
           <Route path="/lesson/:id" element={<LessonPage />} />
           <Route path="/assignment/:id" element={<AssignmentPage />} />
           <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
           <Route path="/create-course" element={<CreateCoursePage />} />
           <Route path="/instructor-courses" element={<InstructorCoursesPage />} />
-          {/* Halaman Kelola Kursus */}
-          <Route path="/manage-course/:id" element={<ManageCoursePage />} /> {/* <--- Tambah Ini */}
-          
+          <Route path="/manage-course/:id" element={<ManageCoursePage />} />
         </Routes>
       </div>
     </Router>
