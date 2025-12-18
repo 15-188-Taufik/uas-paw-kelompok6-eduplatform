@@ -65,3 +65,6 @@ def includeme(config):
     # --- 9. INSTRUCTOR & UI ---
     config.add_route('api_instructor_dashboard', '/api/instructor/dashboard')
     config.add_route('instructor_grading_ui', '/instructor/assignments/{id}/grading')
+
+    # --- 10. UTILITIES ---
+    config.add_route('download_proxy', '/api/proxy_download')

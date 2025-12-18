@@ -4,8 +4,11 @@ import shutil
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import cloudinary.utils # [PENTING] Tambahkan ini untuk generate signed url
 import datetime
 import traceback
+import requests
+import urllib.parse # [PENTING] Untuk parsing URL
 
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest, HTTPUnauthorized, HTTPNotFound, HTTPForbidden, HTTPInternalServerError
@@ -139,7 +142,7 @@ def create_module(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 5. LESSONS (CRUD LENGKAP - PERBAIKAN JSON/POST)
+# 5. LESSONS
 # ==========================================
 
 @view_config(route_name='lessons', renderer='json', request_method='GET')
@@ -162,7 +165,6 @@ def get_lesson_detail(request):
 def create_lesson(request):
     module_id = request.matchdict['module_id']
     try:
-        # [FIX] Handle JSON vs Form Data
         try:
             data = request.json_body
         except:
@@ -180,7 +182,6 @@ def create_lesson(request):
             
         sort_order = int(data.get('sort_order', 0))
 
-        # Handle File Upload (hanya ada di request.POST)
         input_file = request.POST.get('file_material') if 'file_material' in request.POST else None
         
         if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
@@ -216,7 +217,6 @@ def update_lesson(request):
         if not lesson:
             return HTTPNotFound(json_body={'error': 'Lesson not found'})
 
-        # [FIX] Handle JSON vs Form Data
         try:
             data = request.json_body
         except:
@@ -233,7 +233,6 @@ def update_lesson(request):
              else:
                 lesson.is_preview = is_preview_raw.lower() == 'true'
 
-        # Handle File Upload Update
         input_file = request.POST.get('file_material') if 'file_material' in request.POST else None
         if input_file != 'null' and input_file is not None and hasattr(input_file, 'file'):
                 upload_result = cloudinary.uploader.upload(
@@ -263,7 +262,7 @@ def delete_lesson(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 6. ASSIGNMENTS (CRUD LENGKAP + FILE/LINK)
+# 6. ASSIGNMENTS
 # ==========================================
 
 @view_config(route_name='assignments', renderer='json', request_method='GET')
@@ -302,7 +301,6 @@ def get_assignment_detail(request):
 def create_assignment(request):
     module_id = request.matchdict['module_id']
     try:
-        # Handle JSON vs POST
         try:
             data = request.json_body
         except:
@@ -513,7 +511,7 @@ def grade_submission(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 8. ENROLLMENTS & COMPLETIONS (PROGRESS LENGKAP)
+# 8. ENROLLMENTS & COMPLETIONS
 # ==========================================
 
 @view_config(route_name='enroll', renderer='json', request_method='POST')
@@ -553,11 +551,7 @@ def get_my_courses(request):
         course = enrollment.course
         course_data = course.to_dict()
 
-        # ==========================================
-        # LOGIKA PROGRES (MATERI + TUGAS)
-        # ==========================================
-        
-        # 1. Hitung Total Item (Materi + Tugas)
+        # LOGIKA PROGRES
         total_lessons = request.dbsession.query(Lesson)\
             .join(Module)\
             .filter(Module.course_id == course.id)\
@@ -570,7 +564,6 @@ def get_my_courses(request):
             
         total_items = total_lessons + total_assignments
 
-        # 2. Hitung Item Selesai
         completed_lessons = request.dbsession.query(LessonCompletion)\
             .join(Lesson)\
             .join(Module)\
@@ -591,15 +584,12 @@ def get_my_courses(request):
             
         completed_items = completed_lessons + completed_assignments
             
-        # 3. Kalkulasi Persentase
         if total_items > 0:
             progress = (completed_items / total_items) * 100
         else:
             progress = 0
             
         course_data['progress'] = round(progress, 1) 
-        # ==========================================
-
         my_courses_list.append(course_data)
         
     return {'courses': my_courses_list}
@@ -622,3 +612,81 @@ def complete_lesson(request):
         return {'success': True, 'message': 'Lesson marked as complete'}
     except Exception as e:
         return HTTPBadRequest(json_body={'error': str(e)})
+
+# ==========================================
+# 9. PROXY DOWNLOAD (FIXED 401 ERROR)
+# ==========================================
+@view_config(route_name='download_proxy')
+def download_proxy(request):
+    url = request.params.get('url')
+    if not url:
+        return HTTPBadRequest(json_body={'error': 'URL missing'})
+    
+    try:
+        # 1. PARSING PUBLIC ID DARI URL
+        # URL Contoh: https://res.cloudinary.com/.../image/upload/v12345/folder/file.pdf
+        path = urllib.parse.urlparse(url).path
+        
+        # Tentukan resource_type dari URL (image/video/raw)
+        resource_type = 'image' # Default PDF biasanya masuk image di Cloudinary
+        if '/video/' in path: resource_type = 'video'
+        elif '/raw/' in path: resource_type = 'raw'
+        
+        # Pecah path untuk ambil Public ID
+        # Split berdasarkan '/upload/'
+        if '/upload/' in path:
+            parts = path.split('/upload/')
+            right_part = parts[1] # v12345/folder/file.pdf
+            
+            # Buang version (v12345) jika ada
+            segments = right_part.split('/')
+            if segments[0].startswith('v') and segments[0][1:].isdigit():
+                segments.pop(0)
+            
+            # Gabungkan sisanya jadi Public ID
+            public_id_with_ext = "/".join(segments)
+            
+            # Pisahkan ekstensi (Cloudinary butuh public_id tanpa ekstensi untuk generate url)
+            if '.' in public_id_with_ext:
+                public_id, ext = public_id_with_ext.rsplit('.', 1)
+            else:
+                public_id = public_id_with_ext
+                ext = None
+                
+            # 2. GENERATE SIGNED URL (KUNCI UTAMA)
+            # Ini membuat URL baru dengan token keamanan (signature)
+            signed_url, options = cloudinary.utils.cloudinary_url(
+                public_id,
+                resource_type=resource_type,
+                format=ext,
+                sign_url=True, # Aktifkan signing
+                secure=True
+            )
+            
+            # Gunakan URL yang sudah ditandatangani
+            target_url = signed_url
+        else:
+            # Jika format URL aneh, coba pakai apa adanya
+            target_url = url
+
+        # 3. REQUEST KE CLOUDINARY
+        # Header minimalis agar tidak diblokir
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
+        }
+        
+        r = requests.get(target_url, headers=headers, stream=True)
+        r.raise_for_status() # Cek error 401/404
+        
+        # 4. STREAMING RESPONSE
+        filename = url.split('/')[-1].split('?')[0]
+        
+        response = Response(content_type=r.headers.get('Content-Type'))
+        response.content_disposition = f'attachment; filename="{filename}"'
+        response.app_iter = r.iter_content(chunk_size=8192)
+        
+        return response
+        
+    except Exception as e:
+        print(f"Proxy Download Error: {e}")
+        return HTTPNotFound(json_body={'error': f'Gagal mengambil file: {str(e)}'})

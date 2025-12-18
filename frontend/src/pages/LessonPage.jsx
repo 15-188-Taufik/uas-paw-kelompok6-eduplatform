@@ -3,12 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const LessonPage = () => {
-  const { id } = useParams(); // ID Lesson
+  const { id } = useParams();
   const navigate = useNavigate();
   
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isCompleted, setIsCompleted] = useState(false); // State baru untuk status selesai
+  const [isCompleted, setIsCompleted] = useState(false);
   
   const user = JSON.parse(localStorage.getItem('user'));
 
@@ -16,21 +16,8 @@ const LessonPage = () => {
     const fetchLessonData = async () => {
       try {
         setLoading(true);
-        // 1. Ambil Detail Lesson
         const res = await api.get(`/lessons/${id}`);
         setLesson(res.data.lesson);
-
-        // 2. Cek apakah user sudah menyelesaikan lesson ini?
-        // (Kita perlu endpoint khusus atau cek manual, 
-        //  tapi untuk simpel, kita coba hit endpoint complete. 
-        //  Jika return "Already completed", berarti sudah selesai)
-        if (user) {
-            // Cara tricky tanpa buat endpoint baru: 
-            // Coba post complete, backend saya sudah buat agar tidak error kalau duplikat.
-            // Tapi idealnya nanti buat endpoint GET /lessons/{id}/status.
-            // Untuk sekarang, kita biarkan default false dulu,
-            // nanti tombol akan berubah setelah diklik.
-        }
       } catch (err) {
         console.error("Gagal load lesson:", err);
       } finally {
@@ -38,7 +25,7 @@ const LessonPage = () => {
       }
     };
     fetchLessonData();
-  }, [id, user?.id]);
+  }, [id]);
 
   const handleComplete = async () => {
     if (!user) return;
@@ -46,87 +33,166 @@ const LessonPage = () => {
       await api.post(`/lessons/${id}/complete`, {
         student_id: user.id
       });
-      
-      // Update UI jadi selesai
       setIsCompleted(true);
       alert("Selamat! Materi selesai. Progress Anda telah diperbarui.");
-      
-      // Opsional: Balik ke dashboard atau materi lain
-      // navigate('/student-dashboard');
-      
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Helper: Embed Youtube
-  const getEmbedUrl = (url) => {
-    if (!url) return null;
-    if (url.includes('youtube.com/watch?v=')) {
-      return url.replace('watch?v=', 'embed/');
-    } else if (url.includes('youtu.be/')) {
-      return url.replace('youtu.be/', 'youtube.com/embed/');
-    }
-    return url; 
+  // --- HELPER: Proxy Download (Backend Python) ---
+  // Kita tetap pakai ini untuk tombol "Download" agar stabil
+  const getProxyDownloadUrl = (fileUrl) => {
+    if (!fileUrl) return '#';
+    return `${api.defaults.baseURL}/proxy_download?url=${encodeURIComponent(fileUrl)}`;
   };
 
-  if (loading) return <div className="text-center p-5">Memuat materi...</div>;
-  if (!lesson) return <div className="text-center p-5">Materi tidak ditemukan.</div>;
+  // --- HELPER: Google Viewer URL ---
+  // Kita pakai URL ASLI Cloudinary untuk Google Viewer (karena Google butuh akses publik)
+  const getGoogleViewerUrl = (fileUrl) => {
+     return `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+  };
+
+  // --- RENDER CONTENT ---
+  const renderContent = (url) => {
+    if (!url) return null;
+
+    // 1. Youtube Embed
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let embedUrl = url.replace('watch?v=', 'embed/');
+      if (url.includes('youtu.be/')) embedUrl = url.replace('youtu.be/', 'youtube.com/embed/');
+      
+      return (
+        <div className="ratio ratio-16x9 bg-dark rounded overflow-hidden shadow mb-4">
+          <iframe 
+             src={embedUrl} 
+             title="Video Youtube" 
+             allowFullScreen 
+             className="w-100 h-100"
+          />
+        </div>
+      );
+    }
+
+    // Ambil ekstensi
+    let extension = 'FILE';
+    if (url.includes('.')) {
+        extension = url.split('.').pop().toLowerCase();
+    }
+
+    // 2. Video Player (.mp4, .webm)
+    if (['mp4', 'webm', 'ogg', 'mov'].includes(extension)) {
+        return (
+            <div className="ratio ratio-16x9 bg-dark rounded overflow-hidden shadow mb-4">
+                <video controls className="w-100 h-100">
+                    <source src={url} />
+                    Browser Anda tidak mendukung tag video.
+                </video>
+            </div>
+        );
+    }
+
+    // 3. Gambar (.jpg, .png)
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension)) {
+        return (
+            <div className="text-center mb-4">
+                <img src={url} alt="Materi" className="img-fluid rounded shadow" style={{maxHeight: '600px'}} />
+            </div>
+        );
+    }
+
+    // 4. DOCUMENT VIEWER (PDF, WORD, PPT, EXCEL)
+    // Sekarang kita TAMPILKAN viewer karena Cloudinary sudah Public
+    if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'].includes(extension)) {
+        return (
+            <div className="mb-4">
+                {/* Area Viewer */}
+                <div className="ratio ratio-4x3 shadow rounded overflow-hidden border bg-light mb-3">
+                    <iframe 
+                        src={getGoogleViewerUrl(url)} 
+                        title="Document Viewer" 
+                        className="w-100 h-100"
+                        frameBorder="0"
+                    ></iframe>
+                </div>
+                
+                {/* Tombol Download Cadangan */}
+                <div className="text-center">
+                    <a 
+                        href={getProxyDownloadUrl(url)} 
+                        target="_blank" // Proxy backend akan handle attachment
+                        className="btn btn-outline-primary btn-sm rounded-pill px-4"
+                    >
+                        <i className="bi bi-download me-2"></i> Download File Asli
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
+    // 5. Default (ZIP/RAR/Lainnya) -> Hanya Download
+    return (
+        <div className="card mb-4 border-0 shadow-sm" style={{backgroundColor: '#f8f9fa'}}>
+            <div className="card-body p-4 d-flex align-items-center">
+                <div className="bg-primary bg-opacity-10 p-3 rounded-circle me-3">
+                    <i className="bi bi-file-earmark-arrow-down-fill fs-2 text-primary"></i>
+                </div>
+                <div className="flex-grow-1">
+                    <h5 className="fw-bold mb-1">Materi Lampiran</h5>
+                    <p className="text-muted mb-0 small">
+                        File bertipe <strong>.{extension.toUpperCase()}</strong> tersedia.
+                    </p>
+                </div>
+                <a 
+                    href={getProxyDownloadUrl(url)} 
+                    target="_blank" 
+                    className="btn btn-primary fw-bold px-4 py-2 rounded-pill"
+                >
+                    <i className="bi bi-download me-2"></i> Download
+                </a>
+            </div>
+        </div>
+    );
+  };
+
+  if (loading) return <div className="text-center p-5 text-muted">Memuat materi...</div>;
+  if (!lesson) return <div className="text-center p-5 text-danger">Materi tidak ditemukan.</div>;
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px', fontFamily: 'sans-serif' }}>
       
       <button 
         onClick={() => navigate(-1)} 
-        style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', marginBottom: '20px', display:'flex', alignItems:'center', gap:'5px' }}
+        className="btn btn-link text-decoration-none text-secondary ps-0 mb-3 fw-bold"
+        style={{ fontSize: '0.9rem' }}
       >
-        ← Kembali
+        <i className="bi bi-arrow-left me-1"></i> Kembali ke Materi
       </button>
 
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '10px' }}>{lesson.title}</h1>
+      <h1 className="fw-bold text-dark mb-4" style={{ fontSize: '1.8rem' }}>{lesson.title}</h1>
       
-      <div style={{ marginBottom: '30px' }}>
-        {lesson.video_url && (
-            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '12px', backgroundColor: '#000', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-            <iframe 
-                src={getEmbedUrl(lesson.video_url)} 
-                title={lesson.title}
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-            />
-            </div>
-        )}
+      {/* RENDER VIEWER */}
+      {renderContent(lesson.video_url)}
+
+      <div className="bg-white p-4 rounded-3 shadow-sm border mb-5">
+        <h6 className="fw-bold text-muted text-uppercase small mb-3">Deskripsi Materi</h6>
+        <div style={{ lineHeight: '1.8', fontSize: '1rem', color: '#333' }}>
+            {lesson.content_text ? (
+            lesson.content_text.split('\n').map((par, idx) => (
+                <p key={idx} className="mb-3">{par}</p>
+            ))
+            ) : (
+            <p className="text-muted fst-italic">Tidak ada deskripsi tambahan.</p>
+            )}
+        </div>
       </div>
 
-      <div style={{ backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)', lineHeight: '1.8', fontSize: '1.1rem', color: '#333', marginBottom: '40px' }}>
-        {lesson.content_text ? (
-          lesson.content_text.split('\n').map((par, idx) => (
-            <p key={idx} style={{ marginBottom: '1rem' }}>{par}</p>
-          ))
-        ) : (
-          <p className="text-muted">Tidak ada deskripsi teks.</p>
-        )}
-      </div>
-
-      {/* TOMBOL SELESAI */}
-      <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+      <div className="text-center pb-5">
         <button 
           onClick={handleComplete}
           disabled={isCompleted}
-          style={{ 
-            padding: '16px 40px', 
-            fontSize: '1.1rem', 
-            backgroundColor: isCompleted ? '#10b981' : '#2563eb', // Hijau jika selesai, Biru jika belum
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '50px', 
-            cursor: isCompleted ? 'default' : 'pointer',
-            fontWeight: 'bold',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.3s ease'
-          }}
+          className={`btn btn-lg rounded-pill px-5 fw-bold shadow-sm ${isCompleted ? 'btn-success' : 'btn-primary'}`}
+          style={{ transition: 'all 0.3s' }}
         >
           {isCompleted ? (
             <span><i className="bi bi-check-circle-fill me-2"></i> Materi Selesai</span>

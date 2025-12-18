@@ -17,7 +17,10 @@ const ManageCoursePage = () => {
 
   // --- STATE FORM ---
   const [newModuleTitle, setNewModuleTitle] = useState('');
-  const [assignmentFile, setAssignmentFile] = useState(null); // State untuk file tugas
+  
+  // State File Upload
+  const [assignmentFile, setAssignmentFile] = useState(null); // Untuk Tugas
+  const [lessonFile, setLessonFile] = useState(null);         // Untuk Materi
 
   // 1. FETCH DATA (Termasuk Assignments)
   useEffect(() => {
@@ -60,13 +63,15 @@ const ManageCoursePage = () => {
   const selectLesson = (lesson) => {
       setSelectedLesson(lesson);
       setSelectedAssignment(null);
-      setAssignmentFile(null); // Reset file input saat ganti seleksi
+      setAssignmentFile(null); 
+      setLessonFile(null); // Reset file materi
   };
 
   const selectAssignment = (assignment) => {
       setSelectedAssignment(assignment);
       setSelectedLesson(null);
-      setAssignmentFile(null); // Reset file input saat ganti seleksi
+      setAssignmentFile(null);
+      setLessonFile(null);
   };
 
   // --- 3. HANDLERS: CRUD MODULE ---
@@ -87,6 +92,7 @@ const ManageCoursePage = () => {
     const title = prompt("Masukkan Judul Pelajaran Baru:");
     if (!title) return;
     try {
+      // Create awal (masih kosong)
       await api.post(`/modules/${moduleId}/lessons`, { 
         title: title, content_text: '', video_url: '', sort_order: 0 
       });
@@ -99,15 +105,27 @@ const ManageCoursePage = () => {
   const handleUpdateLesson = async (e) => {
     e.preventDefault();
     try {
-      await api.put(`/lessons/${selectedLesson.id}`, {
-        title: selectedLesson.title,
-        video_url: selectedLesson.video_url,
-        content_text: selectedLesson.content_text,
-        is_preview: selectedLesson.is_preview
+      const formData = new FormData();
+      formData.append('title', selectedLesson.title);
+      formData.append('content_text', selectedLesson.content_text || '');
+      formData.append('video_url', selectedLesson.video_url || ''); // URL lama/manual
+      formData.append('is_preview', selectedLesson.is_preview);
+
+      // Jika ada file baru diupload
+      if (lessonFile) {
+          formData.append('file_material', lessonFile);
+      }
+
+      // Backend support PUT multipart
+      await api.put(`/lessons/${selectedLesson.id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
       });
+
       alert('Pelajaran berhasil diupdate!');
+      setLessonFile(null);
       fetchCourseData();
     } catch (err) {
+      console.error(err);
       alert('Gagal menyimpan perubahan.');
     }
   };
@@ -123,7 +141,7 @@ const ManageCoursePage = () => {
     }
   };
 
-  // --- 5. HANDLERS: CRUD ASSIGNMENT (UPDATE LENGKAP) ---
+  // --- 5. HANDLERS: CRUD ASSIGNMENT ---
   const handleAddAssignment = async (moduleId) => {
     const title = prompt("Masukkan Judul Tugas Baru:");
     if (!title) return;
@@ -143,7 +161,6 @@ const ManageCoursePage = () => {
   const handleUpdateAssignment = async (e) => {
       e.preventDefault();
       try {
-          // Gunakan FormData untuk support upload file
           const formData = new FormData();
           formData.append('title', selectedAssignment.title);
           formData.append('description', selectedAssignment.description || '');
@@ -157,7 +174,6 @@ const ManageCoursePage = () => {
               formData.append('attachment_file', assignmentFile);
           }
 
-          // Gunakan POST (atau PUT jika backend support multipart PUT)
           await api.post(`/assignments/${selectedAssignment.id}`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
           });
@@ -182,13 +198,11 @@ const ManageCoursePage = () => {
       }
   };
 
-  // Helper Format Tanggal
   const formatDateTimeForInput = (isoString) => {
       if (!isoString) return '';
       return new Date(isoString).toISOString().slice(0, 16);
   };
 
-  // --- RENDER ---
   if (loading) return <div className="text-center p-5 text-muted">Memuat Editor...</div>;
 
   return (
@@ -205,7 +219,12 @@ const ManageCoursePage = () => {
              <small className="text-muted">Content Manager</small>
           </div>
         </div>
-        <button className="btn btn-dark btn-sm fw-bold px-3 rounded-pill">
+        
+        {/* TOMBOL PREVIEW (SUDAH DIPERBAIKI) */}
+        <button 
+            onClick={() => navigate(`/course/${id}`)} 
+            className="btn btn-dark btn-sm fw-bold px-3 rounded-pill"
+        >
           <i className="bi bi-eye me-2"></i>Preview
         </button>
       </div>
@@ -300,7 +319,7 @@ const ManageCoursePage = () => {
           {/* --- EDITOR AREA --- */}
           <div className="col-md-8 col-lg-9 h-100 overflow-auto">
             
-            {/* 1. EDITOR PELAJARAN */}
+            {/* 1. EDITOR PELAJARAN (LESSON) */}
             {selectedLesson && (
               <div className="p-4 p-lg-5 mx-auto fade-in-up" style={{ maxWidth: '900px' }}>
                 <div className="d-flex justify-content-between align-items-center mb-4">
@@ -313,6 +332,7 @@ const ManageCoursePage = () => {
                 <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
                     <div className="card-body p-4 p-lg-5 bg-white">
                         <form onSubmit={handleUpdateLesson}>
+                            {/* Judul */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Judul Materi</label>
                                 <input type="text" className="form-control form-control-lg fw-bold border-0 bg-light rounded-3 px-3" 
@@ -320,18 +340,39 @@ const ManageCoursePage = () => {
                                     onChange={(e) => setSelectedLesson({...selectedLesson, title: e.target.value})}
                                 />
                             </div>
+
+                            {/* UPLOAD FILE (BARU) */}
                             <div className="mb-4">
-                                <label className="text-uppercase text-muted fw-bold small mb-1">Video URL</label>
+                                <label className="text-uppercase text-muted fw-bold small mb-1">Upload Video / PDF / Gambar</label>
+                                <input 
+                                  type="file" 
+                                  className="form-control"
+                                  onChange={(e) => setLessonFile(e.target.files[0])}
+                                  accept="video/*,image/*,.pdf,.doc,.docx,.ppt,.pptx"
+                                />
+                                <div className="form-text small">
+                                    File yang diupload akan menggantikan Video URL secara otomatis.
+                                </div>
+                            </div>
+
+                            {/* Video URL (Manual) */}
+                            <div className="mb-4">
+                                <label className="text-uppercase text-muted fw-bold small mb-1">Atau Masukkan Link URL (Youtube/External)</label>
                                 <input type="text" className="form-control bg-light border-0 rounded-3 px-3" placeholder="https://youtube.com/..."
                                     value={selectedLesson.video_url || ''}
                                     onChange={(e) => setSelectedLesson({...selectedLesson, video_url: e.target.value})}
                                 />
                             </div>
+
+                            {/* Preview File/Video */}
                             {selectedLesson.video_url && (
                                 <div className="ratio ratio-16x9 mb-4 rounded-3 overflow-hidden bg-dark">
+                                    {/* Jika Youtube/Embeddable */}
                                     <iframe src={selectedLesson.video_url.replace('watch?v=', 'embed/')} title="Preview"></iframe>
                                 </div>
                             )}
+
+                            {/* Deskripsi */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Isi Materi / Deskripsi</label>
                                 <textarea className="form-control bg-light border-0 rounded-3 px-3 py-3" rows="10"
@@ -339,6 +380,7 @@ const ManageCoursePage = () => {
                                     onChange={(e) => setSelectedLesson({...selectedLesson, content_text: e.target.value})}
                                 ></textarea>
                             </div>
+
                             <div className="form-check form-switch mb-4">
                                 <input className="form-check-input" type="checkbox" id="previewSwitch" 
                                     checked={selectedLesson.is_preview || false}
@@ -346,6 +388,7 @@ const ManageCoursePage = () => {
                                 />
                                 <label className="form-check-label" htmlFor="previewSwitch">Jadikan Pratinjau Gratis (Public)</label>
                             </div>
+
                             <button type="submit" className="btn btn-primary btn-lg w-100 rounded-pill fw-bold shadow-sm">Simpan Perubahan</button>
                         </form>
                     </div>
@@ -358,9 +401,17 @@ const ManageCoursePage = () => {
               <div className="p-4 p-lg-5 mx-auto fade-in-up" style={{ maxWidth: '900px' }}>
                  <div className="d-flex justify-content-between align-items-center mb-4">
                   <h4 className="fw-bold mb-0 text-danger">Edit Tugas</h4>
-                  <button onClick={() => handleDeleteAssignment(selectedAssignment.id)} className="btn btn-outline-danger btn-sm rounded-pill px-3">
-                    <i className="bi bi-trash me-1"></i> Hapus
-                  </button>
+                  <div className="d-flex gap-2">
+                      <button 
+                        onClick={() => navigate(`/grading/${selectedAssignment.id}`)}
+                        className="btn btn-success btn-sm rounded-pill px-3 fw-bold"
+                      >
+                        <i className="bi bi-clipboard-check me-2"></i>Nilai Submission
+                      </button>
+                      <button onClick={() => handleDeleteAssignment(selectedAssignment.id)} className="btn btn-outline-danger btn-sm rounded-pill px-3">
+                        <i className="bi bi-trash me-1"></i> Hapus
+                      </button>
+                  </div>
                 </div>
 
                 <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
@@ -399,7 +450,6 @@ const ManageCoursePage = () => {
 
                             <hr className="my-4"/>
 
-                            {/* --- FILE ATTACHMENT --- */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Lampirkan File (PDF/Word/Gambar)</label>
                                 <input 
@@ -414,7 +464,6 @@ const ManageCoursePage = () => {
                                 )}
                             </div>
 
-                            {/* --- LINK REFERENSI --- */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Link Referensi (Optional)</label>
                                 <div className="input-group">
