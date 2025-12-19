@@ -128,10 +128,21 @@ const AssignmentPage = () => {
 
   // Format Tanggal (Contoh: Selasa, 2 Desember 2025 pukul 06.59)
   const formattedDeadline = deadlineDate 
-    ? deadlineDate.toLocaleString('id-ID', { 
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      }).replace(',', ' pukul')
+    ? (() => {
+        const options = { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        };
+        const timeOptions = { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        };
+        const dateStr = deadlineDate.toLocaleDateString('id-ID', options);
+        const timeStr = deadlineDate.toLocaleTimeString('id-ID', timeOptions);
+        return `${dateStr} pukul ${timeStr}`;
+      })()
     : null;
 
   return (

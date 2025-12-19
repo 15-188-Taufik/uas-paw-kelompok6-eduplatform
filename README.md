@@ -1,8 +1,6 @@
 
 # 🎓 EduPlatform - Learning Management System
 
-![EduPlatform Banner](https://via.placeholder.com/1200x300?text=EduPlatform+Banner+Placeholder)
-
 **EduPlatform** adalah sebuah platform manajemen pembelajaran (Learning Management System/LMS) berbasis web yang dirancang untuk memfasilitasi kegiatan belajar mengajar secara daring yang efektif, interaktif, dan mudah diakses.
 
 Proyek ini bertujuan untuk menjembatani kesenjangan antara pengajar (instruktur) dan siswa melalui teknologi digital, memungkinkan distribusi materi pelajaran, pelacakan progres belajar, dan evaluasi hasil belajar dalam satu ekosistem terpadu.
@@ -157,7 +155,7 @@ Format Request & Response umumnya menggunakan JSON.
 
 | Method | Endpoint | Deskripsi | Auth Required |
 | --- | --- | --- | --- |
-| **POST** | `/auth/register` | Mendaftar akun baru (Student/Instructor) | No |
+| **POST** | `/auth/register` | Mendaftar akun baru (Student/Instructor) | Yes |
 | **POST** | `/auth/login` | Masuk ke sistem dan mendapatkan token | No |
 | **GET** | `/courses` | Mengambil semua daftar kursus | Yes |
 | **POST** | `/courses` | Membuat kursus baru (Instructor Only) | Yes |
@@ -174,7 +172,7 @@ Berikut adalah tampilan antarmuka aplikasi EduPlatform:
 
 | Dashboard Pembelajaran | Kursus Saya |
 | :---: | :---: |
-| ![Dashboard Siswa](documentation/DashboardSiswa.jpg) | ![Kursus Saya](documentation/KursusSaya.jpg) |
+| ![Dashboard Siswa](documentation/DashboardSiswa.png) | ![Kursus Saya](documentation/KursusSaya.png) |
 | *Ringkasan aktivitas belajar siswa* | *Daftar kursus yang sedang diikuti* |
 
 **Timeline Deadline**
@@ -185,11 +183,11 @@ Berikut adalah tampilan antarmuka aplikasi EduPlatform:
 
 | Dashboard Instruktur | Manajemen Kursus |
 | :---: | :---: |
-| ![Dashboard Instruktur](documentation/DashboardInstruktur.jpg) | ![Manajemen Instruktur](documentation/ManajemenInstruktur.jpg) |
+| ![Dashboard Instruktur](documentation/DashboardInstruktur.png) | ![Manajemen Instruktur](documentation/ManajemenInstruktur.png) |
 | *Statistik ringkas untuk pengajar* | *Menu pengelolaan kelas dan materi* |
 
 ### 🏠 Halaman Utama (General)
-![Halaman Utama](documentation/Dashboard.jpg)
+![Halaman Utama](documentation/Dashboard.png)
 *Katalog kursus yang tersedia untuk dijelajahi*
 
 ---
