@@ -20,7 +20,6 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy import func
 
 # Import semua model dari folder models
-# Pastikan struktur folder Anda sesuai, biasanya '..' mengacu ke folder parent (myproject)
 from ..models import (
     User, Course, Module, Lesson, 
     Assignment, Submission, Enrollment, LessonCompletion
@@ -191,11 +190,22 @@ def get_course_detail(request):
         return HTTPNotFound(json_body={'error': 'Course not found'})
     return {'course': course.to_dict()}
 
+# --- [MODIFIKASI: MENAMBAHKAN PERHITUNGAN SISWA] ---
 @view_config(route_name='instructor_courses', renderer='json', request_method='GET')
 def get_instructor_courses(request):
     instructor_id = request.matchdict['id']
     courses = request.dbsession.query(Course).filter_by(instructor_id=instructor_id).all()
-    return {'courses': [c.to_dict() for c in courses]}
+    
+    courses_data = []
+    for c in courses:
+        data = c.to_dict()
+        # Hitung jumlah siswa dari tabel Enrollment
+        student_count = request.dbsession.query(Enrollment).filter(Enrollment.course_id == c.id).count()
+        data['students_count'] = student_count
+        courses_data.append(data)
+
+    return {'courses': courses_data}
+# ---------------------------------------------------
 
 @view_config(route_name='courses', renderer='json', request_method='POST')
 def create_course(request):
@@ -229,8 +239,6 @@ def create_course(request):
         print(f"Error creating course: {e}")
         return HTTPBadRequest(json_body={'error': str(e)})
 
-# Tambahkan fungsi ini di default.py
-
 @view_config(route_name='course_students', renderer='json', request_method='GET')
 def get_course_students(request):
     """Mengambil data siswa yang terdaftar di kursus tertentu"""
@@ -240,9 +248,7 @@ def get_course_students(request):
     if not course:
         return HTTPNotFound(json_body={'error': 'Course not found'})
     
-    # Ambil data student dari relasi enrollments
     students_list = []
-    # Pastikan model Course punya relasi 'enrollments' (biasanya backref dari model Enrollment)
     if hasattr(course, 'enrollments'):
         for enrollment in course.enrollments:
             student = enrollment.student
@@ -314,7 +320,6 @@ def get_lesson_detail(request):
     data = lesson.to_dict()
     data['content_text'] = lesson.content_text 
     
-    # Cek status completion
     is_completed = False
     if student_id:
         exists = request.dbsession.query(LessonCompletion).filter_by(
