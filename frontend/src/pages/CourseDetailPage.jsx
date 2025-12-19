@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import Swal from 'sweetalert2'; // Pastikan install: npm install sweetalert2
 
 const CourseDetailPage = () => {
   const { id } = useParams(); 
@@ -12,7 +13,6 @@ const CourseDetailPage = () => {
   const [enrollStatus, setEnrollStatus] = useState(null); 
   const [openModuleId, setOpenModuleId] = useState(null); 
   const [enrollKey, setEnrollKey] = useState('');
-  const [expandedLesson, setExpandedLesson] = useState(null);
   const [hoveredLesson, setHoveredLesson] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -61,6 +61,8 @@ const CourseDetailPage = () => {
         if (user) {
             try {
                 const myCourses = await api.get(`/students/${user.id}/courses`);
+                // Cek apakah course ID ini ada di daftar kursus saya
+                // Pastikan tipe data sama (string/number) dengan ==
                 if (myCourses.data.courses.some(c => c.id == id)) setEnrollStatus('success');
             } catch (err) {}
         }
@@ -78,7 +80,7 @@ const CourseDetailPage = () => {
     if (!user) return navigate('/login');
 
     if (course.is_locked && !enrollKey && enrollStatus !== 'success') {
-        alert("🔒 Kursus ini terkunci. Masukkan Enrollment Key.");
+        Swal.fire('Terkunci', 'Kursus ini terkunci. Masukkan Enrollment Key.', 'warning');
         return;
     }
 
@@ -89,11 +91,50 @@ const CourseDetailPage = () => {
         enrollment_key: enrollKey 
       });
       setEnrollStatus('success');
-      alert("🎉 Berhasil Mendaftar!");
+      Swal.fire('Berhasil!', 'Selamat belajar!', 'success');
     } catch (err) {
       const msg = err.response?.data?.error || "Gagal mendaftar";
       if (msg === 'Already enrolled') setEnrollStatus('success');
-      else alert("Gagal: " + msg);
+      else Swal.fire('Gagal', msg, 'error');
+    }
+  };
+
+  // --- LOGIKA UNENROLL ---
+  const handleUnenroll = async () => {
+    if (!user) return;
+
+    const result = await Swal.fire({
+      title: 'Keluar dari Kursus?',
+      text: "Progres belajar Anda mungkin akan hilang jika Anda keluar.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: theme.danger,
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Keluar',
+      cancelButtonText: 'Batal'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.post('/unenroll', {
+          user_id: user.id,
+          course_id: id
+        });
+        
+        setEnrollStatus(null); // Reset status enrollment
+        Swal.fire(
+          'Berhasil Keluar',
+          'Anda telah membatalkan pendaftaran kursus ini.',
+          'success'
+        );
+      } catch (error) {
+        console.error(error);
+        Swal.fire(
+          'Gagal',
+          error.response?.data?.message || 'Terjadi kesalahan saat unenroll.',
+          'error'
+        );
+      }
     }
   };
 
@@ -128,6 +169,7 @@ const CourseDetailPage = () => {
       </div>
     </div>
   );
+
   if (!course) return (
     <div style={{ 
       minHeight: '100vh', 
@@ -516,7 +558,7 @@ const CourseDetailPage = () => {
                                       key={lesson.id}
                                       onMouseEnter={() => setHoveredLesson(lesson.id)}
                                       onMouseLeave={() => setHoveredLesson(null)}
-                                      onClick={() => (checkAccess() || lesson.is_preview) ? navigate(`/lesson/${lesson.id}`) : alert("🔒 Materi terkunci")}
+                                      onClick={() => (checkAccess() || lesson.is_preview) ? navigate(`/lesson/${lesson.id}`) : Swal.fire('Terkunci', 'Anda harus mendaftar dulu.', 'info')}
                                       style={{
                                         padding: '14px 24px 14px 60px',
                                         borderBottom: `1px solid ${theme.border}`,
@@ -552,7 +594,7 @@ const CourseDetailPage = () => {
                                       key={assign.id}
                                       onMouseEnter={() => setHoveredLesson(assign.id)}
                                       onMouseLeave={() => setHoveredLesson(null)}
-                                      onClick={() => checkAccess() ? navigate(`/assignment/${assign.id}`) : alert("🔒 Tugas terkunci")}
+                                      onClick={() => checkAccess() ? navigate(`/assignment/${assign.id}`) : Swal.fire('Terkunci', 'Anda harus mendaftar dulu.', 'info')}
                                       style={{
                                         padding: '14px 24px 14px 60px',
                                         borderBottom: `1px solid ${theme.border}`,
@@ -689,7 +731,7 @@ const CourseDetailPage = () => {
                    <button 
                       onClick={() => {
                           if(modules[0]?.lessons[0]) navigate(`/lesson/${modules[0].lessons[0].id}`);
-                          else alert("Materi belum tersedia");
+                          else Swal.fire('Info', 'Materi belum tersedia', 'info');
                       }}
                       style={{
                           width: '100%',
@@ -706,7 +748,8 @@ const CourseDetailPage = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '8px'
+                          gap: '8px',
+                          marginBottom: '16px'
                       }}
                       onMouseEnter={(e) => {
                           e.target.style.transform = 'translateY(-2px)';
@@ -718,6 +761,35 @@ const CourseDetailPage = () => {
                       }}
                   >
                       <i className="bi bi-play-circle-fill"></i> Lanjut Belajar
+                  </button>
+
+                  {/* TOMBOL UNENROLL */}
+                  <button 
+                      onClick={handleUnenroll}
+                      style={{
+                          width: '100%',
+                          padding: '10px 24px',
+                          backgroundColor: 'transparent',
+                          color: theme.danger,
+                          border: `1px solid ${theme.danger}40`,
+                          borderRadius: '12px',
+                          fontWeight: '600',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                      }}
+                      onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#FEF2F2';
+                      }}
+                      onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = 'transparent';
+                      }}
+                  >
+                      <i className="bi bi-box-arrow-right"></i> Batal Gabung
                   </button>
                 </div>
               ) : (
@@ -738,7 +810,7 @@ const CourseDetailPage = () => {
                               backgroundColor: '#FEE2E2',
                               color: '#DC2626',
                               padding: '8px 14px',
-                              borderRadius: '10px',
+                              borderRadius: '100px',
                               fontSize: '12px',
                               fontWeight: '700',
                               display: 'flex',
@@ -856,60 +928,6 @@ const CourseDetailPage = () => {
       </div>
     </div>
   );
-};
-
-// --- ENHANCED STYLES ---
-const styles = {
-    container: {
-        maxWidth: '1140px',
-        margin: '0 auto',
-        padding: '24px 24px',
-    },
-    centerBox: {
-        minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FDF8F4', fontSize: '16px', fontWeight: '500', color: '#555'
-    },
-    badgeCategory: {
-        backgroundColor: '#FFF0E6', color: '#FF7E3E', padding: '8px 16px', borderRadius: '100px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase'
-    },
-    badgeLock: {
-        backgroundColor: '#FEE2E2', color: '#DC2626', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '700'
-    },
-    syllabusCard: {
-        borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', border: '1px solid #F0F0F0'
-    },
-    moduleItem: {
-        borderBottom: '1px solid #F0F0F0'
-    },
-    lessonRow: {
-        padding: '16px 24px 16px 50px', 
-        borderBottom: '1px solid #F0F0F0', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        cursor: 'pointer', 
-        transition: 'all 0.2s ease',
-    },
-    playIconSmall: {
-        width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#E0E7FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', flexShrink: 0, fontWeight: '700'
-    },
-    previewBadge: {
-        fontSize: '11px', backgroundColor: '#ECFDF5', color: '#059669', padding: '4px 8px', borderRadius: '6px', fontWeight: '600'
-    },
-    stickyCard: {
-        position: 'sticky', top: '40px', 
-        backgroundColor: '#FFFFFF', borderRadius: '24px', overflow: 'hidden',
-        boxShadow: '0 20px 50px rgba(255, 126, 62, 0.08)', border: '1px solid #F8F8F8'
-    },
-    gradientOverlay: {
-        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        background: 'linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.15) 100%)', pointerEvents: 'none'
-    },
-    inputKey: {
-        width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #E5E7EB', outline: 'none', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#F9FAFB', fontWeight: '500', fontFamily: 'Poppins, sans-serif', transition: 'all 0.2s ease'
-    },
-    btnPrimary: {
-        width: '100%', padding: '14px', backgroundColor: '#FF7E3E', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', boxShadow: '0 10px 25px rgba(255, 126, 62, 0.25)', transition: 'all 0.2s ease', fontFamily: 'Poppins, sans-serif'
-    }
 };
 
 export default CourseDetailPage;
