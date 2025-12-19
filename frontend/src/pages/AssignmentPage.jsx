@@ -22,12 +22,12 @@ const AssignmentPage = () => {
     const fetchData = async () => {
       try {
         // Ambil info tugas
-        const assignRes = await api.get(`/assignments/${id}`);
+        const assignRes = await api.get(`/api/assignments/${id}`);
         setAssignment(assignRes.data.assignment);
 
         // Ambil info submission user (kalau sudah login)
         if (user) {
-            const subRes = await api.get(`/assignments/${id}/my_submission`, {
+            const subRes = await api.get(`/api/assignments/${id}/my_submission`, {
                 params: { student_id: user.id }
             });
             if (subRes.data.submitted) {

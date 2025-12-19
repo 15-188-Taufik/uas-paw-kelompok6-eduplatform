@@ -60,7 +60,7 @@ const CourseDetailPage = () => {
 
         if (user) {
             try {
-                const myCourses = await api.get(`/students/${user.id}/courses`);
+                const myCourses = await api.get(`/api/students/${user.id}/courses`);
                 // Cek apakah course ID ini ada di daftar kursus saya
                 // Pastikan tipe data sama (string/number) dengan ==
                 if (myCourses.data.courses.some(c => c.id == id)) setEnrollStatus('success');
