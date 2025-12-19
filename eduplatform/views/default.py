@@ -46,6 +46,7 @@ cloudinary.config(
 @view_config(route_name='assignment_detail', request_method='OPTIONS') 
 @view_config(route_name='submissions', request_method='OPTIONS')
 @view_config(route_name='enroll', request_method='OPTIONS')
+@view_config(route_name='api_unenroll', request_method='OPTIONS')
 @view_config(route_name='complete_lesson', request_method='OPTIONS')
 @view_config(route_name='api_grade_submission', request_method='OPTIONS')
 @view_config(route_name='student_timeline', request_method='OPTIONS')
@@ -620,7 +621,7 @@ def api_unenroll(request):
     except Exception as e:
         request.response.status = 500
         return {'status': 'error', 'message': str(e)}
-        
+
 # ==========================================
 # GANTI FUNGSI INI DI default.py
 # ==========================================
