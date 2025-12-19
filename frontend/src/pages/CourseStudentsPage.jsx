@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const CourseStudentsPage = () => {
-  const { courseId } = useParams();
+  const { courseId } = useParams(); // Pastikan di App.jsx routenya: /course-students/:courseId
   const [course, setCourse] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,19 +23,23 @@ const CourseStudentsPage = () => {
   useEffect(() => {
     const fetchCourseStudents = async () => {
       try {
-        const response = await api.get('/api/instructor/dashboard');
-        const courseData = response.data.courses.find(c => c.id === parseInt(courseId));
-        if (courseData) {
-          setCourse(courseData);
-          setStudents(courseData.enrolled_students || []);
-        }
+        // [PERBAIKAN] Panggil endpoint spesifik yang baru kita buat
+        const response = await api.get(`/api/courses/${courseId}/students`);
+        
+        // Backend return: { course: {...}, students: [...] }
+        setCourse(response.data.course);
+        setStudents(response.data.students || []);
+        
       } catch (err) {
         console.error("Gagal mengambil data siswa kursus:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchCourseStudents();
+
+    if (courseId) {
+        fetchCourseStudents();
+    }
   }, [courseId]);
 
   if (loading) {
@@ -69,10 +73,10 @@ const CourseStudentsPage = () => {
         <div className="d-flex justify-content-between align-items-center mb-5 pb-4" style={{borderBottom: `2px solid ${theme.primaryLight}`}}>
           <div>
             <h2 className="fw-bold mb-1" style={{color: theme.textMain}}>Siswa Terdaftar</h2>
-            <p className="mb-0" style={{color: theme.textSec}}>{course.title}</p>
+            <p className="mb-0" style={{color: theme.textSec}}>Kursus: <strong>{course.title}</strong></p>
           </div>
           <button
-            onClick={() => navigate('/instructor-dashboard')}
+            onClick={() => navigate('/instructor-courses')}
             className="btn fw-bold px-4 rounded-pill shadow-sm"
             style={{ backgroundColor: theme.primary, color: 'white', border: 'none', padding: '12px 24px' }}
           >
@@ -99,7 +103,7 @@ const CourseStudentsPage = () => {
 
         {/* DAFTAR SISWA */}
         <div className="d-flex align-items-center justify-content-between mb-4">
-            <h5 className="fw-bold" style={{color: theme.textMain}}>Daftar Siswa Terdaftar</h5>
+            <h5 className="fw-bold" style={{color: theme.textMain}}>Daftar Siswa</h5>
         </div>
 
         {students.length === 0 ? (
@@ -116,13 +120,13 @@ const CourseStudentsPage = () => {
               <div className="col" key={student.id}>
                 <div className="card h-100 border-0" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
                   <div className="card-body p-4 d-flex align-items-center gap-3">
-                    <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '60px', height: '60px', backgroundColor: theme.primaryLight, color: theme.primary}}>
-                      <i className="bi bi-person-fill fs-3"></i>
+                    <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '50px', height: '50px', backgroundColor: theme.primaryLight, color: theme.primary, flexShrink: 0}}>
+                      <span className="fw-bold fs-5">{student.name.charAt(0).toUpperCase()}</span>
                     </div>
-                    <div className="flex-grow-1">
-                      <h6 className="fw-bold mb-1" style={{color: theme.textMain}}>{student.name}</h6>
-                      <p className="small mb-1" style={{color: theme.textSec}}>{student.email}</p>
-                      <small className="text-muted">ID: {student.id}</small>
+                    <div className="flex-grow-1 overflow-hidden">
+                      <h6 className="fw-bold mb-1 text-truncate" style={{color: theme.textMain}} title={student.name}>{student.name}</h6>
+                      <p className="small mb-1 text-truncate" style={{color: theme.textSec}} title={student.email}>{student.email}</p>
+                      <small className="text-muted" style={{fontSize: '0.75rem'}}>ID Siswa: {student.id}</small>
                     </div>
                   </div>
                 </div>

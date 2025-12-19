@@ -229,6 +229,36 @@ def create_course(request):
         print(f"Error creating course: {e}")
         return HTTPBadRequest(json_body={'error': str(e)})
 
+# Tambahkan fungsi ini di default.py
+
+@view_config(route_name='course_students', renderer='json', request_method='GET')
+def get_course_students(request):
+    """Mengambil data siswa yang terdaftar di kursus tertentu"""
+    course_id = request.matchdict['id']
+    course = request.dbsession.query(Course).get(course_id)
+    
+    if not course:
+        return HTTPNotFound(json_body={'error': 'Course not found'})
+    
+    # Ambil data student dari relasi enrollments
+    students_list = []
+    # Pastikan model Course punya relasi 'enrollments' (biasanya backref dari model Enrollment)
+    if hasattr(course, 'enrollments'):
+        for enrollment in course.enrollments:
+            student = enrollment.student
+            if student:
+                students_list.append({
+                    'id': student.id,
+                    'name': student.name,
+                    'email': student.email,
+                    'enrolled_at': str(enrollment.enrolled_at) if hasattr(enrollment, 'enrolled_at') else None
+                })
+    
+    return {
+        'course': course.to_dict(),
+        'students': students_list
+    }
+
 # ==========================================
 # 4. MODULES
 # ==========================================

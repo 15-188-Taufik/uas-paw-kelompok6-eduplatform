@@ -23,7 +23,7 @@ def includeme(config):
     
     config.add_route('course_detail', '/api/courses/{id}')
     config.add_route('api_course_detail', '/api/courses/{id}') # Alias
-    
+    config.add_route('course_students', '/api/courses/{id}/students')
     config.add_route('instructor_courses', '/api/instructors/{id}/courses')
     
     # --- 3. MODULES ---
