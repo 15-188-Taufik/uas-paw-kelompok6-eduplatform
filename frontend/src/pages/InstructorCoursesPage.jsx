@@ -14,7 +14,7 @@ const InstructorCoursesPage = () => {
     category: 'Pemrograman',
     description: '',
     thumbnail_file: null,
-    enrollment_key: '' // [BARU] Tambahkan state enrollment_key
+    enrollment_key: '' 
   });
   const [previewThumb, setPreviewThumb] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -69,7 +69,6 @@ const InstructorCoursesPage = () => {
       formData.append('description', newCourse.description);
       formData.append('instructor_id', user.id);
       
-      // [BARU] Append enrollment key jika diisi
       if (newCourse.enrollment_key) {
         formData.append('enrollment_key', newCourse.enrollment_key);
       }
@@ -88,7 +87,7 @@ const InstructorCoursesPage = () => {
         category: 'Pemrograman', 
         description: '', 
         thumbnail_file: null,
-        enrollment_key: '' // Reset key juga
+        enrollment_key: '' 
       });
       setPreviewThumb(null);
       setShowCreateForm(false);
@@ -210,7 +209,12 @@ const InstructorCoursesPage = () => {
                                             <i className="bi bi-people me-1"></i> Siswa
                                         </button>
                                         <div className="d-flex gap-2">
-                                            <button className="btn btn-sm btn-light border flex-grow-1 rounded-pill" title="Edit Info">
+                                            {/* [FIX] Tombol INFO sekarang mengirim state openInfo: true */}
+                                            <button 
+                                                onClick={() => navigate(`/manage-course/${course.id}`, { state: { openInfo: true } })}
+                                                className="btn btn-sm btn-light border flex-grow-1 rounded-pill" 
+                                                title="Edit Info"
+                                            >
                                                 <i className="bi bi-pencil-square"></i> Info
                                             </button>
                                             <button
@@ -262,7 +266,6 @@ const InstructorCoursesPage = () => {
                                     </select>
                                 </div>
 
-                                {/* [BARU] Input Enrollment Key */}
                                 <div className="mb-3">
                                     <label className="form-label small fw-bold text-muted">KUNCI AKSES (OPSIONAL)</label>
                                     <input 

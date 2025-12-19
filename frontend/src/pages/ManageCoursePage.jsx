@@ -1,20 +1,21 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom'; // Tambah useLocation
 import Swal from 'sweetalert2';
 import api from '../api/axios';
 
 const ManageCoursePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation(); // Hook untuk menangkap state dari halaman sebelumnya
   
   // --- STATE DATA ---
   const [course, setCourse] = useState(null);
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // --- STATE EDIT COURSE INFO (NEW) ---
+  // --- STATE EDIT COURSE INFO ---
   const [isEditingCourse, setIsEditingCourse] = useState(false);
-  const [courseTemp, setCourseTemp] = useState({}); // Data sementara saat edit
+  const [courseTemp, setCourseTemp] = useState({});
   const [courseThumbnailFile, setCourseThumbnailFile] = useState(null);
   const [previewThumbnail, setPreviewThumbnail] = useState(null);
 
@@ -27,11 +28,11 @@ const ManageCoursePage = () => {
   const [assignmentFile, setAssignmentFile] = useState(null);
   const [lessonFile, setLessonFile] = useState(null);
 
-  // --- THEME & STYLES (Glassmorphism) ---
+  // --- THEME ---
   const theme = {
     primary: '#FF7E3E',
     primaryGradient: 'linear-gradient(135deg, #FF7E3E 0%, #FF5F6D 100%)',
-    bg: '#f0f2f5', // Background base agak abu muda agar glass terlihat
+    bg: '#f0f2f5',
     glass: {
       background: 'rgba(255, 255, 255, 0.65)',
       backdropFilter: 'blur(20px)',
@@ -43,9 +44,20 @@ const ManageCoursePage = () => {
     danger: '#FF4D4F'
   };
 
+  // --- USE EFFECT UTAMA ---
   useEffect(() => {
     fetchCourseData();
   }, [id]);
+
+  // --- USE EFFECT DETEKSI NAVIGASI DARI TOMBOL INFO ---
+  useEffect(() => {
+    // Jika ada state openInfo dari halaman sebelumnya, langsung buka mode edit
+    if (location.state?.openInfo) {
+      setIsEditingCourse(true);
+      // Scroll ke paling atas agar terlihat
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [location.state]);
 
   const fetchCourseData = async () => {
     try {
@@ -79,7 +91,7 @@ const ManageCoursePage = () => {
 
       setModules(modulesWithContent);
     } catch (err) {
-      console.error("Error:", err);
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
@@ -91,7 +103,6 @@ const ManageCoursePage = () => {
       setSelectedAssignment(null);
       setAssignmentFile(null); 
       setLessonFile(null);
-      // Scroll to editor (optional logic if needed)
   };
 
   const selectAssignment = (assignment) => {
@@ -101,7 +112,7 @@ const ManageCoursePage = () => {
       setLessonFile(null);
   };
 
-  // --- HANDLERS: COURSE INFO (NEW) ---
+  // --- HANDLERS: COURSE INFO (FIXED) ---
   const handleThumbnailChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -112,6 +123,15 @@ const ManageCoursePage = () => {
 
   const handleUpdateCourse = async (e) => {
     e.preventDefault();
+    
+    // Tampilkan Loading Swal
+    Swal.fire({
+        title: 'Menyimpan...',
+        text: 'Mohon tunggu sebentar',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
     try {
       const formData = new FormData();
       formData.append('title', courseTemp.title);
@@ -119,11 +139,16 @@ const ManageCoursePage = () => {
       formData.append('enrollment_key', courseTemp.enrollment_key);
       formData.append('description', courseTemp.description);
       
+      // [PENTING] Method Spoofing: Kirim sebagai POST, tapi backend baca sebagai PUT
+      // Ini trik agar file upload terbaca saat update
+      formData.append('_method', 'PUT'); 
+
       if (courseThumbnailFile) {
         formData.append('thumbnail', courseThumbnailFile);
       }
 
-      await api.put(`/api/courses/${id}`, formData, {
+      // Gunakan POST ke endpoint update (karena ada _method: PUT di formData)
+      await api.post(`/api/courses/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -136,10 +161,12 @@ const ManageCoursePage = () => {
       });
       
       setIsEditingCourse(false);
-      fetchCourseData(); // Refresh data
+      fetchCourseData(); // Refresh data agar tampilan terupdate
     } catch (err) {
-      console.error(err);
-      Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan info kursus', 'error');
+      console.error("Error Updating Course:", err.response || err);
+      // Tampilkan pesan error spesifik jika ada dari backend
+      const errMsg = err.response?.data?.message || 'Terjadi kesalahan saat menyimpan info kursus';
+      Swal.fire('Gagal', errMsg, 'error');
     }
   };
 
@@ -185,15 +212,21 @@ const ManageCoursePage = () => {
       formData.append('content_text', selectedLesson.content_text || '');
       formData.append('video_url', selectedLesson.video_url || '');
       formData.append('is_preview', selectedLesson.is_preview ? 1 : 0);
+      
+      // Sama seperti update course, gunakan spoofing jika ada file
+      formData.append('_method', 'PUT');
+
       if (lessonFile) formData.append('file_material', lessonFile);
 
-      await api.put(`/api/lessons/${selectedLesson.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      // Gunakan POST + _method: PUT
+      await api.post(`/api/lessons/${selectedLesson.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       Swal.fire({ title: 'Tersimpan!', icon: 'success', timer: 1500, showConfirmButton: false });
       setLessonFile(null);
       fetchCourseData();
     } catch (err) {
-      Swal.fire('Error', 'Gagal menyimpan', 'error');
+      console.error(err);
+      Swal.fire('Error', 'Gagal menyimpan materi', 'error');
     }
   };
 
@@ -244,6 +277,8 @@ const ManageCoursePage = () => {
           formData.append('description', selectedAssignment.description || '');
           formData.append('link_url', selectedAssignment.link_url || '');
           if (selectedAssignment.due_date) formData.append('due_date', selectedAssignment.due_date);
+          
+          formData.append('_method', 'PUT'); // Method spoofing
           if (assignmentFile) formData.append('attachment_file', assignmentFile);
 
           await api.post(`/api/assignments/${selectedAssignment.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -418,7 +453,7 @@ const ManageCoursePage = () => {
             <div className="container-fluid p-4">
 
                 {/* 1. COURSE INFO SECTION (Glass Card) */}
-                <div className="mb-5 rounded-4 p-4 fade-in-up" style={theme.glass}>
+                <div id="courseInfoSection" className="mb-5 rounded-4 p-4 fade-in-up" style={theme.glass}>
                     <div className="d-flex justify-content-between align-items-start mb-4">
                         <h4 className="fw-bold m-0" style={{color: theme.textMain}}>Informasi Kursus</h4>
                         {!isEditingCourse && (
@@ -538,6 +573,7 @@ const ManageCoursePage = () => {
                                         src={course?.thumbnail_url || 'https://via.placeholder.com/300x200?text=No+Thumbnail'} 
                                         alt="Thumbnail" 
                                         className="object-fit-cover"
+                                        onError={(e) => { e.target.src = 'https://via.placeholder.com/300x200?text=Error+Image'; }}
                                     />
                                 </div>
                             </div>
@@ -591,6 +627,7 @@ const ManageCoursePage = () => {
                                         onChange={(e) => setLessonFile(e.target.files[0])}
                                         accept="video/*,image/*,.pdf,.doc,.docx,.ppt,.pptx"
                                     />
+                                    <div className="form-text small">Upload file akan menggantikan materi sebelumnya.</div>
                                 </div>
 
                                 {/* Video URL */}
@@ -732,7 +769,6 @@ const ManageCoursePage = () => {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          /* Scrollbar halus ala Apple */
           ::-webkit-scrollbar { width: 6px; height: 6px; }
           ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
