@@ -6,7 +6,6 @@ from ..models import User
 
 # --- LOGIN ---
 # Tambahkan view_config kedua untuk menangani route_name='login' juga
-@view_config(route_name='login', renderer='json', request_method='POST')     # <--- TAMBAHAN
 @view_config(route_name='api_login', renderer='json', request_method='POST')
 def login(request):
     try:
@@ -38,8 +37,7 @@ def login(request):
     return {'error': 'Email atau Password salah'}
 
 # --- REGISTER ---
-@view_config(route_name='register', renderer='json', request_method='POST')      # <--- TAMBAHAN
-@view_config(route_name='api_register', renderer='json', request_method='POST')
+@view_config(route_name='register', renderer='json', request_method='POST')   
 def register(request):
     try:
         payload = request.json_body
