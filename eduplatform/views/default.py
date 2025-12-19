@@ -48,6 +48,7 @@ cloudinary.config(
 @view_config(route_name='enroll', request_method='OPTIONS')
 @view_config(route_name='complete_lesson', request_method='OPTIONS')
 @view_config(route_name='api_grade_submission', request_method='OPTIONS')
+@view_config(route_name='student_timeline', request_method='OPTIONS')
 def options_view(request):
     return Response(body='', status=200, content_type='text/plain')
 
@@ -66,7 +67,21 @@ def get_users(request):
 
 @view_config(route_name='courses', renderer='json', request_method='GET')
 def get_courses(request):
-    courses = request.dbsession.query(Course).all()
+    # Ambil parameter pencarian dari URL (misal: /api/courses?search=python)
+    search_query = request.params.get('search')
+    
+    # Mulai query dasar
+    query = request.dbsession.query(Course)
+    
+    # Jika ada pencarian, filter berdasarkan judul (case-insensitive)
+    if search_query:
+        # Gunakan ilike agar 'python' cocok dengan 'Python', 'PYTHON', dll.
+        query = query.filter(Course.title.ilike(f'%{search_query}%'))
+    
+    # Urutkan dari yang terbaru (opsional, tapi bagus untuk UX)
+    # Pastikan model Course punya kolom id atau created_at, default sort by ID desc
+    courses = query.order_by(Course.id.desc()).all()
+    
     return {'courses': [c.to_dict() for c in courses]}
 
 @view_config(route_name='course_detail', renderer='json', request_method='GET')
@@ -144,22 +159,54 @@ def create_module(request):
 # ==========================================
 # 5. LESSONS
 # ==========================================
-
 @view_config(route_name='lessons', renderer='json', request_method='GET')
 def get_lessons(request):
-    module_id = request.matchdict['module_id']
-    lessons = request.dbsession.query(Lesson).filter_by(module_id=module_id).order_by(Lesson.sort_order).all()
-    return {'lessons': [l.to_dict() for l in lessons]}
+    try:
+        module_id = request.matchdict['module_id']
+        
+        # Ambil semua lesson berdasarkan module_id, urutkan berdasarkan sort_order
+        lessons = request.dbsession.query(Lesson)\
+            .filter_by(module_id=module_id)\
+            .order_by(Lesson.sort_order)\
+            .all()
+            
+        return {'lessons': [l.to_dict() for l in lessons]}
+        
+    except Exception as e:
+        print(f"Error getting lessons: {e}")
+        return {'lessons': []} # Return array kosong agar frontend tidak crash
 
 @view_config(route_name='lesson_detail', renderer='json', request_method='GET')
 def get_lesson_detail(request):
     lesson_id = request.matchdict['id']
+    # Ambil student_id dari query param (?student_id=...)
+    student_id = request.params.get('student_id') 
+    
     lesson = request.dbsession.query(Lesson).get(lesson_id)
     if not lesson:
         return HTTPNotFound(json_body={'error': 'Lesson not found'})
+    
     data = lesson.to_dict()
     data['content_text'] = lesson.content_text 
+    
+    # [LOGIKA BARU] Cek status completion
+    is_completed = False
+    if student_id:
+        exists = request.dbsession.query(LessonCompletion).filter_by(
+            student_id=student_id, 
+            lesson_id=lesson_id
+        ).first()
+        if exists:
+            is_completed = True
+            
+    data['completed'] = is_completed # Kirim status ke frontend
+    
+    # Kirim juga info course_id agar frontend bisa load modul/sidebar jika url tidak lengkap
+    if lesson.module:
+        data['course_id'] = lesson.module.course_id
+
     return {'lesson': data}
+
 
 @view_config(route_name='lessons', renderer='json', request_method='POST')
 def create_lesson(request):
@@ -539,6 +586,40 @@ def enroll_course(request):
     except Exception as e:
         return HTTPBadRequest(json_body={'error': str(e)})
 
+# --- [BARU] FUNGSI UNENROLL ---
+@view_config(route_name='unenroll', renderer='json', request_method='POST')
+def unenroll_course(request):
+    try:
+        data = request.json_body
+        student_id = data.get('student_id')
+        course_id = data.get('course_id')
+
+        # Cari data enrollment
+        enrollment = request.dbsession.query(Enrollment).filter_by(
+            student_id=student_id, 
+            course_id=course_id
+        ).first()
+
+        if not enrollment:
+            return HTTPNotFound(json_body={'error': 'Data pendaftaran tidak ditemukan'})
+
+        # Hapus data
+        request.dbsession.delete(enrollment)
+        
+        # Opsional: Jika ingin menghapus progress (LessonCompletion) juga, uncomment ini:
+        # request.dbsession.query(LessonCompletion).filter_by(student_id=student_id).filter(
+        #     LessonCompletion.lesson.has(module=Module.course_id == course_id)
+        # ).delete(synchronize_session=False)
+
+        return {'success': True, 'message': 'Berhasil keluar dari kursus'}
+        
+    except Exception as e:
+        return HTTPBadRequest(json_body={'error': str(e)})
+
+# ==========================================
+# GANTI FUNGSI INI DI default.py
+# ==========================================
+
 @view_config(route_name='my_courses', renderer='json', request_method='GET')
 def get_my_courses(request):
     student_id = request.matchdict['id']
@@ -547,11 +628,15 @@ def get_my_courses(request):
         return HTTPNotFound(json_body={'error': 'User not found'})
     
     my_courses_list = []
+    
+    # Ambil waktu sekarang untuk filter deadline yang sudah lewat
+    now = datetime.datetime.now()
+
     for enrollment in user.enrollments:
         course = enrollment.course
         course_data = course.to_dict()
 
-        # LOGIKA PROGRES
+        # --- 1. LOGIKA PROGRES (Tetap Sama) ---
         total_lessons = request.dbsession.query(Lesson)\
             .join(Module)\
             .filter(Module.course_id == course.id)\
@@ -589,11 +674,105 @@ def get_my_courses(request):
         else:
             progress = 0
             
-        course_data['progress'] = round(progress, 1) 
+        course_data['progress'] = round(progress, 1)
+
+        # --- 2. [BARU] LOGIKA DEADLINE TERDEKAT ---
+        # Mencari assignment di course ini yang due_date-nya > sekarang (belum lewat)
+        # Diurutkan dari yang paling cepat (asc)
+        nearest_assignment = request.dbsession.query(Assignment)\
+            .join(Module)\
+            .filter(
+                Module.course_id == course.id,
+                Assignment.due_date != None,
+                Assignment.due_date > now
+            )\
+            .order_by(Assignment.due_date.asc())\
+            .first()
+            
+        if nearest_assignment:
+            # Kirim dalam format string ISO agar mudah dibaca JS Frontend
+            course_data['deadline'] = str(nearest_assignment.due_date)
+            # Opsional: Kirim juga nama tugasnya jika ingin ditampilkan detail
+            course_data['next_task_title'] = nearest_assignment.title
+        else:
+            course_data['deadline'] = None
+
         my_courses_list.append(course_data)
         
     return {'courses': my_courses_list}
 
+# ==========================================
+# GANTI FUNGSI INI DI default.py
+# ==========================================
+
+@view_config(route_name='student_timeline', renderer='json', request_method='GET')
+def get_student_timeline(request):
+    student_id = request.matchdict['id']
+    
+    # Ambil waktu server (naive/tanpa timezone)
+    now = datetime.datetime.now() 
+    
+    # 1. Ambil SEMUA assignment dari course yang diikuti student
+    #    Menggunakan .all() untuk memastikan tidak hanya satu
+    assignments = request.dbsession.query(Assignment)\
+        .join(Module)\
+        .join(Course)\
+        .join(Enrollment)\
+        .filter(Enrollment.student_id == student_id)\
+        .filter(Assignment.due_date != None)\
+        .order_by(Assignment.due_date.asc())\
+        .all()
+        
+    # 2. Ambil semua submission student ini (untuk cek status submitted)
+    submissions = request.dbsession.query(Submission)\
+        .filter(Submission.student_id == student_id)\
+        .all()
+    submitted_ids = {sub.assignment_id for sub in submissions}
+    
+    timeline_data = []
+    
+    for assign in assignments:
+        is_submitted = assign.id in submitted_ids
+        due_date = assign.due_date
+        
+        # [PENTING] Normalisasi Timezone untuk mencegah TypeError
+        # Jika due_date punya info timezone, kita hapus agar sama dengan 'now'
+        comparison_date = due_date
+        if due_date and due_date.tzinfo is not None:
+            comparison_date = due_date.replace(tzinfo=None)
+        
+        # Hitung sisa hari
+        # Jika comparison_date < now, hasilnya negatif (berarti overdue/lewat)
+        delta = comparison_date - now
+        days_left = delta.days
+        
+        # Tentukan Status
+        status = 'upcoming'
+        if is_submitted:
+            status = 'submitted'
+        elif comparison_date < now:
+            status = 'overdue'
+        elif 0 <= days_left <= 3:
+            status = 'urgent'
+            
+        # Perbaikan tampilan hari:
+        # Jika hari ini deadline, set days_left 0
+        if days_left == -1 and delta.seconds > 0: 
+             days_left = 0 # Masih hari yang sama tapi jam belum lewat (opsional logic)
+
+        timeline_data.append({
+            'id': assign.id,
+            'title': assign.title,
+            'course_title': assign.module.course.title,
+            'module_title': assign.module.title,
+            'due_date': str(due_date),
+            'status': status,
+            'days_left': days_left,
+            'course_id': assign.module.course.id
+        })
+        
+    return {'timeline': timeline_data}
+    
 @view_config(route_name='complete_lesson', renderer='json', request_method='POST')
 def complete_lesson(request):
     lesson_id = request.matchdict['lesson_id']

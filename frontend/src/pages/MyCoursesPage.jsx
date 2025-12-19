@@ -19,7 +19,9 @@ const MyCoursesPage = () => {
     textDark: '#2D2D2D',
     textLight: '#7A7A7A',
     border: '#EAEAEA',
-    cardShadow: '0 10px 30px rgba(0,0,0,0.04)'
+    cardShadow: '0 10px 30px rgba(0,0,0,0.04)',
+    dangerBg: '#FEF2F2', // Warna background merah lembut untuk tombol hapus
+    dangerText: '#EF4444' // Warna teks merah
   };
 
   useEffect(() => {
@@ -31,7 +33,6 @@ const MyCoursesPage = () => {
 
     const fetchMyCourses = async () => {
       try {
-        // [FIX] Gunakan URL yang sesuai dengan routes.py: /students/{id}/courses
         const response = await api.get(`/students/${user.id}/courses`);
         setCourses(response.data.courses);
       } catch (err) {
@@ -42,7 +43,32 @@ const MyCoursesPage = () => {
     };
     
     fetchMyCourses();
-  }, [navigate]); // Hapus 'user' dari dependency agar tidak loop, karena user didapat dari localStorage langsung
+  }, [navigate]); 
+
+  // --- FUNGSI UNENROLL ---
+  const handleUnenroll = async (courseId, courseTitle, e) => {
+    e.stopPropagation(); // Mencegah klik tembus ke card (navigate)
+    
+    if (!window.confirm(`Apakah Anda yakin ingin keluar dari kursus "${courseTitle}"? Progress belajar Anda akan hilang permanen.`)) {
+        return;
+    }
+
+    try {
+        await api.post('/unenroll', {
+            student_id: user.id,
+            course_id: courseId
+        });
+        
+        alert("Berhasil keluar dari kursus.");
+        
+        // Update UI: Hapus kursus dari state tanpa reload page
+        setCourses(prevCourses => prevCourses.filter(c => c.id !== courseId));
+        
+    } catch (err) {
+        console.error(err);
+        alert("Gagal melakukan unenroll. Pastikan Backend sudah memiliki route /api/unenroll");
+    }
+  };
 
   if (loading) {
     return (
@@ -131,6 +157,7 @@ const MyCoursesPage = () => {
                 key={course.id} 
                 onMouseEnter={() => setHoveredCard(course.id)}
                 onMouseLeave={() => setHoveredCard(null)}
+                onClick={() => navigate(`/course/${course.id}`)} // Klik card untuk navigate
                 style={{ 
                   backgroundColor: colors.white,
                   borderRadius: '24px', 
@@ -225,35 +252,68 @@ const MyCoursesPage = () => {
                     </div>
                   </div>
 
-                  {/* Footer Card: Button & Arrow */}
+                  {/* Footer Card: Buttons */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/course/${course.id}`);
-                      }}
-                      style={{ 
-                        backgroundColor: colors.primary, 
-                        color: 'white', 
-                        border: 'none', 
-                        padding: '10px 20px', 
-                        borderRadius: '12px', 
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(255, 126, 62, 0.3)',
-                        transition: 'all 0.2s ease',
-                        fontFamily: 'Poppins'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'translateY(-2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      Lanjutkan
-                    </button>
+                    
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/course/${course.id}`);
+                          }}
+                          style={{ 
+                            backgroundColor: colors.primary, 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '10px 20px', 
+                            borderRadius: '12px', 
+                            fontWeight: '600', 
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(255, 126, 62, 0.3)',
+                            transition: 'all 0.2s ease',
+                            fontFamily: 'Poppins'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.transform = 'translateY(-2px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          Lanjutkan
+                        </button>
+
+                        {/* TOMBOL UNENROLL (BARU) */}
+                        <button 
+                          onClick={(e) => handleUnenroll(course.id, course.title, e)}
+                          title="Batal Daftar / Keluar Kursus"
+                          style={{ 
+                            backgroundColor: colors.dangerBg, 
+                            color: colors.dangerText, 
+                            border: 'none', 
+                            width: '42px', 
+                            height: '42px',
+                            borderRadius: '12px', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '16px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.backgroundColor = '#FEE2E2';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.backgroundColor = colors.dangerBg;
+                          }}
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                    </div>
                     
                     {/* Arrow Icon Circle */}
                     <div style={{ 

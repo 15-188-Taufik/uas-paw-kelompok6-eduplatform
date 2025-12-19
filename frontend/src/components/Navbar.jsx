@@ -1,24 +1,35 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react'; // Ganti useMemo dengan useEffect
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const user = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
-  }, []);
+  // [PERBAIKAN] Gunakan State, bukan Memo
+  const [user, setUser] = useState(null);
+
+  // [PERBAIKAN] Cek LocalStorage setiap kali URL berubah (Login/Logout/Pindah Halaman)
+  useEffect(() => {
+    try {
+        const userData = JSON.parse(localStorage.getItem('user'));
+        setUser(userData);
+    } catch {
+        setUser(null);
+    }
+  }, [location]); // Dependency 'location' memastikan navbar refresh saat pindah halaman
 
   const [searchTerm, setSearchTerm] = useState('');
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    // Set user null secara manual agar UI langsung berubah sebelum navigate (opsional tapi bagus)
+    setUser(null); 
     navigate('/login');
   };
 
   // Warna Tema
   const themeColor = '#FF7E3E';
-  const bgColor = '#FFFFFF'; // Warna Background Putih
+  const bgColor = '#FFFFFF'; 
 
   const [searchHovered, setSearchHovered] = useState(false);
 
@@ -36,7 +47,6 @@ const Navbar = () => {
   };
 
   return (
-    // HAPUS 'bg-white' dan tambahkan backgroundColor di style
     <nav className="navbar navbar-expand-lg navbar-light sticky-top border-bottom shadow-sm" 
          style={{ padding: '12px 0', backgroundColor: bgColor, margin: 0 }}>
       <div className="container">

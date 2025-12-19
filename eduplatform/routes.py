@@ -37,17 +37,14 @@ def includeme(config):
     
     # --- 3. MODULES ---
     config.add_route('modules', '/api/courses/{course_id}/modules') 
-    # (Tambahan jika mau edit/hapus modul di masa depan)
     config.add_route('module_detail', '/api/modules/{id}') 
 
     # --- 4. LESSONS ---
     config.add_route('lessons', '/api/modules/{module_id}/lessons')
-    # Route ini akan dipakai untuk GET, PUT (Edit), dan DELETE (Hapus)
     config.add_route('lesson_detail', '/api/lessons/{id}')
     
     # --- 5. ASSIGNMENTS ---
     config.add_route('assignments', '/api/modules/{module_id}/assignments')
-    # Route ini akan dipakai untuk GET, PUT (Edit), dan DELETE (Hapus)
     config.add_route('assignment_detail', '/api/assignments/{id}')
     
     # --- 6. SUBMISSIONS ---
@@ -57,7 +54,9 @@ def includeme(config):
 
     # --- 7. ENROLLMENTS ---
     config.add_route('enroll', '/api/enroll')
+    config.add_route('unenroll', '/api/unenroll') # <--- [BARU] Tambahkan ini
     config.add_route('my_courses', '/api/students/{id}/courses')
+    config.add_route('student_timeline', '/api/students/{id}/timeline')
     
     # --- 8. COMPLETIONS ---
     config.add_route('complete_lesson', '/api/lessons/{lesson_id}/complete')

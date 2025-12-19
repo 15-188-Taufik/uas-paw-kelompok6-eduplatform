@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // Tambah useLocation
 import api from '../api/axios';
 
 const HomePage = () => {
@@ -8,13 +8,29 @@ const HomePage = () => {
   const [error, setError] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('semua');
+  
   const navigate = useNavigate();
+  const location = useLocation(); // Hook untuk baca URL
+
+  // 1. Ambil Keyword Pencarian dari URL
+  const queryParams = new URLSearchParams(location.search);
+  const searchQuery = queryParams.get('search');
 
   useEffect(() => {
     const fetchCourses = async () => {
+      setLoading(true);
       try {
-        const response = await api.get('/courses');
+        // 2. Logika Fetch: Pakai search jika ada, jika tidak ambil semua
+        const endpoint = searchQuery 
+          ? `/courses?search=${encodeURIComponent(searchQuery)}` 
+          : '/courses';
+          
+        const response = await api.get(endpoint);
         setCourses(response.data.courses); 
+        
+        // Reset kategori ke 'semua' saat melakukan pencarian baru
+        if (searchQuery) setSelectedCategory('semua');
+        
       } catch (err) {
         console.error("Error:", err);
         setError("Gagal mengambil data. Pastikan Backend jalan.");
@@ -24,7 +40,7 @@ const HomePage = () => {
     };
 
     fetchCourses();
-  }, []);
+  }, [searchQuery]); // Re-fetch saat keyword berubah
 
   // Theme Configuration
   const colors = {
@@ -40,23 +56,25 @@ const HomePage = () => {
     cardShadowHeavy: '0 20px 40px rgba(0,0,0,0.1)'
   };
 
-  // Get unique categories
+  // Get unique categories (hanya dari hasil fetch)
   const categories = ['semua', ...new Set(courses.map(c => c.category || 'Umum'))];
 
-  // Filter courses
+  // Filter courses (Client side filtering untuk kategori)
   const filteredCourses = courses.filter(course => {
     const matchCategory = selectedCategory === 'semua' || course.category === selectedCategory;
     return matchCategory;
   });
 
-  // Featured course (first one)
-  const featuredCourse = courses[0];
+  // Featured course (first one) - HANYA TAMPIL JIKA TIDAK SEDANG MENCARI
+  const featuredCourse = !searchQuery && courses.length > 0 ? courses[0] : null;
 
   if (loading) return (
     <div style={{ minHeight: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏳</div>
-        <p style={{ color: colors.primary, fontWeight: '600', fontSize: '16px' }}>Sedang memuat kursus...</p>
+        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}></div>
+        <p style={{ color: colors.primary, fontWeight: '600', fontSize: '16px', marginTop: '10px' }}>
+          {searchQuery ? 'Mencari kursus...' : 'Sedang memuat kursus...'}
+        </p>
       </div>
     </div>
   );
@@ -93,36 +111,55 @@ const HomePage = () => {
 
       <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '40px 20px' }}>
         
-        {/* HEADER - Enhanced */}
-        <div style={{ marginBottom: '50px', textAlign: 'center' }}>
-          <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '800', 
-            color: colors.textDark, 
-            marginBottom: '12px',
-            background: `linear-gradient(135deg, ${colors.primary}, #FF6B6B)`,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            Jelajahi Dunia Pembelajaran
-          </h1>
-          <p style={{ 
-            color: colors.textLight, 
-            fontSize: '14px',
-            marginBottom: '30px',
-            maxWidth: '500px',
-            margin: 'auto',
-            lineHeight: 1.6
-          }}>
-            Tingkatkan keahlianmu dengan ribuan kursus berkualitas dari instruktur berpengalaman
-          </p>
+        {/* HEADER */}
+        <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+          
+          {/* Judul Berubah Tergantung Mode Search */}
+          {searchQuery ? (
+            <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+                <button 
+                  onClick={() => navigate('/')}
+                  style={{ background: 'none', border: 'none', color: colors.textLight, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px', padding: 0 }}
+                >
+                  <i className="bi bi-arrow-left"></i> Kembali ke Beranda
+                </button>
+                <h1 style={{ fontSize: '28px', fontWeight: '800', color: colors.textDark }}>
+                  Hasil pencarian: <span style={{ color: colors.primary }}>"{searchQuery}"</span>
+                </h1>
+                <p style={{ color: colors.textLight }}>Ditemukan {filteredCourses.length} kursus yang relevan</p>
+            </div>
+          ) : (
+            <>
+              <h1 style={{ 
+                fontSize: '32px', 
+                fontWeight: '800', 
+                color: colors.textDark, 
+                marginBottom: '12px',
+                background: `linear-gradient(135deg, ${colors.primary}, #FF6B6B)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Jelajahi Dunia Pembelajaran
+              </h1>
+              <p style={{ 
+                color: colors.textLight, 
+                fontSize: '14px',
+                marginBottom: '30px',
+                maxWidth: '500px',
+                margin: 'auto',
+                lineHeight: 1.6
+              }}>
+                Tingkatkan keahlianmu dengan ribuan kursus berkualitas dari instruktur berpengalaman
+              </p>
+            </>
+          )}
 
-          {/* Category Filter */}
+          {/* Category Filter (Tetap tampil untuk filter hasil search juga) */}
           <div style={{
             display: 'flex',
             gap: '12px',
-            justifyContent: 'center',
+            justifyContent: searchQuery ? 'flex-start' : 'center', // Align kiri kalau search
             flexWrap: 'wrap',
             marginBottom: '20px'
           }}>
@@ -161,8 +198,8 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Featured Course - Only if filteredCourses includes featured */}
-        {filteredCourses.length > 0 && featuredCourse && filteredCourses[0] === featuredCourse && (
+        {/* Featured Course - HANYA TAMPIL JIKA TIDAK SEARCH */}
+        {!searchQuery && featuredCourse && filteredCourses.includes(featuredCourse) && (
           <div style={{
             marginBottom: '50px',
             background: `linear-gradient(135deg, ${colors.primary}, #FF6B6B)`,
@@ -282,11 +319,12 @@ const HomePage = () => {
               Tidak ada kursus ditemukan
             </h3>
             <p style={{ color: colors.textMuted, marginBottom: '24px' }}>
-              Coba ubah kategori atau cari dengan kata kunci lain
+              {searchQuery ? `Tidak ada hasil untuk "${searchQuery}"` : 'Coba ubah kategori filter'}
             </p>
             <button
               onClick={() => {
-                setSelectedCategory('semua');
+                if (searchQuery) navigate('/');
+                else setSelectedCategory('semua');
               }}
               style={{
                 padding: '10px 24px',
@@ -298,179 +336,153 @@ const HomePage = () => {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = `0 4px 12px ${colors.primary}40`;
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}
             >
-              Reset Filter
+              {searchQuery ? 'Hapus Pencarian' : 'Reset Filter'}
             </button>
           </div>
         ) : (
-          <>
-            <div style={{
-              marginBottom: '20px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{
-                color: colors.textDark,
-                fontWeight: '700',
-                fontSize: '18px',
-                margin: 0
-              }}>
-                {filteredCourses.length} Kursus Tersedia
-              </h3>
-            </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gap: '24px', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))'
-            }}>
-              {filteredCourses.map((course) => (
-                <div 
-                  key={course.id} 
-                  onMouseEnter={() => setHoveredCard(course.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                  style={{ 
+          <div style={{ 
+            display: 'grid', 
+            gap: '24px', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))'
+          }}>
+            {filteredCourses.map((course) => (
+              <div 
+                key={course.id} 
+                onMouseEnter={() => setHoveredCard(course.id)}
+                onMouseLeave={() => setHoveredCard(null)}
+                style={{ 
+                  backgroundColor: colors.white,
+                  borderRadius: '20px', 
+                  overflow: 'hidden', 
+                  border: `2px solid ${hoveredCard === course.id ? colors.primary : colors.border}`,
+                  boxShadow: hoveredCard === course.id ? colors.cardShadowHeavy : colors.cardShadow,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: hoveredCard === course.id ? 'translateY(-8px) scale(1.02)' : 'translateY(0) scale(1)',
+                  cursor: 'pointer',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  position: 'relative'
+                }}
+                onClick={() => navigate(`/course/${course.id}`)}
+              >
+                
+                {/* Image Container */}
+                <div style={{ 
+                  borderRadius: '16px', 
+                  overflow: 'hidden', 
+                  height: '200px', 
+                  marginBottom: '16px',
+                  position: 'relative'
+                }}>
+                  <img 
+                    src={course.thumbnail_url || 'https://via.placeholder.com/300x200?text=No+Image'} 
+                    alt={course.title} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover',
+                      transition: 'transform 0.3s ease',
+                      transform: hoveredCard === course.id ? 'scale(1.05)' : 'scale(1)'
+                    }}
+                  />
+                  {/* Category Tag */}
+                  <span style={{ 
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
                     backgroundColor: colors.white,
-                    borderRadius: '20px', 
-                    overflow: 'hidden', 
-                    border: `2px solid ${hoveredCard === course.id ? colors.primary : colors.border}`,
-                    boxShadow: hoveredCard === course.id ? colors.cardShadowHeavy : colors.cardShadow,
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    transform: hoveredCard === course.id ? 'translateY(-8px) scale(1.02)' : 'translateY(0) scale(1)',
-                    cursor: 'pointer',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    position: 'relative'
-                  }}
-                  onClick={() => navigate(`/course/${course.id}`)}
-                >
-                  
-                  {/* Image Container */}
-                  <div style={{ 
-                    borderRadius: '16px', 
-                    overflow: 'hidden', 
-                    height: '200px', 
-                    marginBottom: '16px',
-                    position: 'relative'
+                    color: colors.primary,
+                    padding: '6px 14px',
+                    borderRadius: '50px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                   }}>
-                    <img 
-                      src={course.thumbnail_url || 'https://via.placeholder.com/300x200?text=No+Image'} 
-                      alt={course.title} 
-                      style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        objectFit: 'cover',
-                        transition: 'transform 0.3s ease',
-                        transform: hoveredCard === course.id ? 'scale(1.05)' : 'scale(1)'
-                      }}
-                    />
-                    {/* Category Tag */}
-                    <span style={{ 
-                      position: 'absolute',
-                      top: '12px',
-                      left: '12px',
-                      backgroundColor: colors.white,
-                      color: colors.primary,
-                      padding: '6px 14px',
-                      borderRadius: '50px',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}>
-                      {course.category || 'Umum'}
-                    </span>
-                  </div>
+                    {course.category || 'Umum'}
+                  </span>
+                </div>
+                
+                {/* Content */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h3 style={{ 
+                    margin: '0 0 8px 0', 
+                    fontSize: '16px', 
+                    fontWeight: '700', 
+                    color: colors.textDark,
+                    lineHeight: '1.3'
+                  }}>
+                    {course.title}
+                  </h3>
                   
-                  {/* Content */}
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ 
-                      margin: '0 0 8px 0', 
-                      fontSize: '16px', 
-                      fontWeight: '700', 
-                      color: colors.textDark,
-                      lineHeight: '1.3'
-                    }}>
-                      {course.title}
-                    </h3>
+                  <p style={{ 
+                    color: colors.textMuted, 
+                    fontSize: '13px', 
+                    marginBottom: '16px', 
+                    lineHeight: '1.5',
+                    display: '-webkit-box',
+                    WebkitLineClamp: '2',
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    flex: 1
+                  }}>
+                    {course.description || 'Kursus menarik untuk meningkatkan skill Anda'}
+                  </p>
+                  
+                  {/* Footer */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    paddingTop: '12px',
+                    borderTop: `1px solid ${colors.border}`
+                  }}>
+                    <button 
+                      style={{ 
+                        backgroundColor: colors.primary, 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '8px 16px', 
+                        borderRadius: '10px', 
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = `0 4px 12px ${colors.primary}40`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    >
+                      Lihat Detail
+                    </button>
                     
-                    <p style={{ 
-                      color: colors.textMuted, 
-                      fontSize: '13px', 
-                      marginBottom: '16px', 
-                      lineHeight: '1.5',
-                      display: '-webkit-box',
-                      WebkitLineClamp: '2',
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      flex: 1
-                    }}>
-                      {course.description || 'Kursus menarik untuk meningkatkan skill Anda'}
-                    </p>
-                    
-                    {/* Footer */}
                     <div style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '50%', 
+                      backgroundColor: colors.primaryLight, 
                       display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      paddingTop: '12px',
-                      borderTop: `1px solid ${colors.border}`
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      transform: hoveredCard === course.id ? 'rotate(45deg) scale(1.1)' : 'rotate(0) scale(1)'
                     }}>
-                      <button 
-                        style={{ 
-                          backgroundColor: colors.primary, 
-                          color: 'white', 
-                          border: 'none', 
-                          padding: '8px 16px', 
-                          borderRadius: '10px', 
-                          fontWeight: '600',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.transform = 'translateY(-2px)';
-                          e.target.style.boxShadow = `0 4px 12px ${colors.primary}40`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = 'none';
-                        }}
-                      >
-                        Lihat Detail
-                      </button>
-                      
-                      <div style={{ 
-                        width: '32px', 
-                        height: '32px', 
-                        borderRadius: '50%', 
-                        backgroundColor: colors.primaryLight, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        transition: 'all 0.3s ease',
-                        transform: hoveredCard === course.id ? 'rotate(45deg) scale(1.1)' : 'rotate(0) scale(1)'
-                      }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
                     </div>
                   </div>
-
                 </div>
-              ))}
-            </div>
-          </>
+
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
