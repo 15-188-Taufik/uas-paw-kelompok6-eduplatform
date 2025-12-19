@@ -14,7 +14,6 @@ def includeme(config):
     config.add_route('api_register', '/api/register')
     config.add_route('api_login', '/api/login')
     
-    config.add_route('users', '/api/users')
     config.add_route('user_detail', '/api/users/{id}')
     
     # --- 2. COURSES ---
