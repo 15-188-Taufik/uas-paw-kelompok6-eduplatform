@@ -1,20 +1,6 @@
-from pyramid.events import NewRequest
-
-# --- FUNGSI TAMBAHAN UNTUK CORS ---
-def add_cors_headers_response_callback(event):
-    def cors_headers(request, response):
-        response.headers.update({
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS', # Pastikan ada PUT dan DELETE
-            'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
-            'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Max-Age': '1728000',
-        })
-    event.request.add_response_callback(cors_headers)
-
 def includeme(config):
-    # Aktifkan CORS Subscriber
-    config.add_subscriber(add_cors_headers_response_callback, NewRequest)
+    # Catatan: CORS dan Configurator utama sudah ada di __init__.py
+    # Jadi di sini kita fokus mendaftarkan URL saja.
 
     config.add_static_view('static', 'static', cache_max_age=3600)
     config.add_route('home', '/')
@@ -23,7 +9,7 @@ def includeme(config):
     config.add_route('register', '/api/register')
     config.add_route('login', '/api/login')
     
-    # Route Legacy
+    # Route Legacy (Biar aman kalau ada kode lama yang panggil nama ini)
     config.add_route('api_register', '/api/register')
     config.add_route('api_login', '/api/login')
     
@@ -32,7 +18,12 @@ def includeme(config):
     
     # --- 2. COURSES ---
     config.add_route('courses', '/api/courses')
+    # Alias untuk menjaga kompatibilitas nama route
+    config.add_route('api_courses', '/api/courses') 
+    
     config.add_route('course_detail', '/api/courses/{id}')
+    config.add_route('api_course_detail', '/api/courses/{id}') # Alias
+    
     config.add_route('instructor_courses', '/api/instructors/{id}/courses')
     
     # --- 3. MODULES ---
@@ -54,7 +45,12 @@ def includeme(config):
 
     # --- 7. ENROLLMENTS ---
     config.add_route('enroll', '/api/enroll')
-    config.add_route('unenroll', '/api/unenroll') # <--- [BARU] Tambahkan ini
+    config.add_route('api_enroll', '/api/enroll') # Alias jaga-jaga
+    
+    # [PERBAIKAN UTAMA DI SINI] 
+    # Nama route harus 'api_unenroll' sesuai yang ada di views/default.py
+    config.add_route('api_unenroll', '/api/unenroll') 
+    
     config.add_route('my_courses', '/api/students/{id}/courses')
     config.add_route('student_timeline', '/api/students/{id}/timeline')
     
