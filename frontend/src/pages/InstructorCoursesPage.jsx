@@ -13,7 +13,8 @@ const InstructorCoursesPage = () => {
     title: '',
     category: 'Pemrograman',
     description: '',
-    thumbnail_file: null
+    thumbnail_file: null,
+    enrollment_key: '' // [BARU] Tambahkan state enrollment_key
   });
   const [previewThumb, setPreviewThumb] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -33,7 +34,6 @@ const InstructorCoursesPage = () => {
 
   const fetchCourses = async () => {
     try {
-      // [PERBAIKAN] Tambah /api di depan
       const response = await api.get(`/api/instructors/${user.id}/courses`);
       setCourses(response.data.courses);
     } catch (err) {
@@ -68,17 +68,28 @@ const InstructorCoursesPage = () => {
       formData.append('category', newCourse.category);
       formData.append('description', newCourse.description);
       formData.append('instructor_id', user.id);
+      
+      // [BARU] Append enrollment key jika diisi
+      if (newCourse.enrollment_key) {
+        formData.append('enrollment_key', newCourse.enrollment_key);
+      }
+
       if (newCourse.thumbnail_file) {
         formData.append('thumbnail_file', newCourse.thumbnail_file);
       }
 
-      // [PERBAIKAN] Tambah /api di depan
       await api.post('/api/courses', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      // Reset
-      setNewCourse({ title: '', category: 'Pemrograman', description: '', thumbnail_file: null });
+      // Reset Form
+      setNewCourse({ 
+        title: '', 
+        category: 'Pemrograman', 
+        description: '', 
+        thumbnail_file: null,
+        enrollment_key: '' // Reset key juga
+      });
       setPreviewThumb(null);
       setShowCreateForm(false);
       fetchCourses();
@@ -115,7 +126,6 @@ const InstructorCoursesPage = () => {
 
     if (result.isConfirmed) {
         try {
-            // [PERBAIKAN] Tambah /api di depan
             await api.delete(`/api/courses/${courseId}`);
             fetchCourses();
             Swal.fire({ title: 'Terhapus!', icon: 'success', timer: 1500, showConfirmButton: false });
@@ -171,7 +181,14 @@ const InstructorCoursesPage = () => {
                                         />
                                     </div>
                                     <div className="col-md-6 col-8 ps-3">
-                                        <div className="badge mb-1" style={{backgroundColor: theme.primaryLight, color: theme.primary}}>{course.category}</div>
+                                        <div className="d-flex align-items-center gap-2 mb-1">
+                                            <div className="badge" style={{backgroundColor: theme.primaryLight, color: theme.primary}}>{course.category}</div>
+                                            {course.enrollment_key && (
+                                                <div className="badge bg-danger bg-opacity-10 text-danger">
+                                                    <i className="bi bi-lock-fill me-1"></i>Terkunci
+                                                </div>
+                                            )}
+                                        </div>
                                         <h5 className="fw-bold mb-1 text-truncate" style={{color: theme.textMain}}>{course.title}</h5>
                                         <p className="small mb-0 d-none d-md-block text-truncate" style={{color: theme.textSec}}>
                                             {course.description || 'Tidak ada deskripsi.'}
@@ -244,6 +261,21 @@ const InstructorCoursesPage = () => {
                                         <option value="Akademik">Akademik</option>
                                     </select>
                                 </div>
+
+                                {/* [BARU] Input Enrollment Key */}
+                                <div className="mb-3">
+                                    <label className="form-label small fw-bold text-muted">KUNCI AKSES (OPSIONAL)</label>
+                                    <input 
+                                        type="text" 
+                                        className="form-control" 
+                                        placeholder="Kosongkan jika gratis"
+                                        value={newCourse.enrollment_key}
+                                        onChange={e => setNewCourse({...newCourse, enrollment_key: e.target.value})}
+                                        style={{backgroundColor: theme.bg, border: 'none'}}
+                                    />
+                                    <small className="text-muted" style={{fontSize: '11px'}}>Mahasiswa perlu memasukkan kode ini untuk bergabung.</small>
+                                </div>
+
                                 <div className="mb-3">
                                     <label className="form-label small fw-bold text-muted">DESKRIPSI</label>
                                     <textarea 
