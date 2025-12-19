@@ -1,4 +1,80 @@
-# EduPlatform - Local Development Setup
+
+# 🎓 EduPlatform - Learning Management System
+
+![EduPlatform Banner](https://via.placeholder.com/1200x300?text=EduPlatform+Banner+Placeholder)
+
+**EduPlatform** adalah sebuah platform manajemen pembelajaran (Learning Management System/LMS) berbasis web yang dirancang untuk memfasilitasi kegiatan belajar mengajar secara daring yang efektif, interaktif, dan mudah diakses.
+
+Proyek ini bertujuan untuk menjembatani kesenjangan antara pengajar (instruktur) dan siswa melalui teknologi digital, memungkinkan distribusi materi pelajaran, pelacakan progres belajar, dan evaluasi hasil belajar dalam satu ekosistem terpadu.
+
+---
+
+## 👥 Tim Pengembang (Kelompok 6)
+
+| Nama Lengkap | NIM | Peran (Role) |
+| :--- | :--- | :--- |
+| **Muhammad Ghama Al Fajri** | 123140182 | Backend Developer |
+| **Abi Sholihan** | 123140192 | Backend Developer |
+| **Andini Rahma Kemala** | 123140067 | Frontend Developer |
+| **Miftahul Khoiriyah** | 123140064 | Frontend Developer |
+| **Zahwa Natasya Hamzah** | 123140069 | UI/UX Designer |
+| **Taufik Hidayat NST** | 123140188 | Database Design & Implementation |
+
+---
+
+## 🔗 Tautan Penting (Links)
+
+* **🌐 Frontend Deployment:** [https://www.eduplatform.web.id/](https://www.eduplatform.web.id/) (Alternatif: [Vercel App](https://uas-paw-kelompok6-eduplatform.vercel.app/))
+* **⚙️ Backend API:** [https://api.eduplatform.web.id/](https://api.eduplatform.web.id/)
+* **🎥 Video Presentasi:** [Masukkan Link Video Di Sini]
+
+---
+
+## 🌟 Fitur Utama (Key Features)
+
+Platform ini dibangun dengan fokus pada antarmuka pengguna (User Interface) yang modern dan responsif, memastikan pengalaman pengguna yang mulus baik di perangkat desktop maupun seluler.
+
+### 1. 🔐 Autentikasi & Manajemen Peran
+* **Multi-Role Access:** Pemisahan akses antara **Student** dan **Instructor**.
+* **Secure Session:** Login dan Logout aman untuk menjaga sesi pengguna.
+
+### 2. 📚 Manajemen Kursus (Instructor)
+* **CRUD Capabilities:** Instruktur dapat Membuat, Melihat, Mengubah, dan Menghapus kursus.
+* **Course Details:** Manajemen judul, deskripsi lengkap, dan kategori kursus.
+* **Module Organization:** Memecah kursus menjadi modul/sesi terstruktur.
+* **Multimedia Support:** Menambahkan teks bacaan dan tautan video materi.
+
+### 3. 🎓 Sistem Pendaftaran (Student)
+* **Student Browsing:** Menjelajahi katalog kursus berdasarkan kategori.
+* **Enrollment:** Mendaftar (*Enroll*) atau membatalkan (*Unenroll*) kursus secara mandiri.
+* **My Courses:** Akses cepat ke daftar kursus yang sedang diikuti.
+
+### 4. 📊 Dashboard Terdedikasi
+* **Instructor Dashboard:** Memantau kinerja kursus dan melihat daftar siswa terdaftar.
+* **Student Dashboard:** Melacak progres belajar (*progress tracking*) dan deadline tugas terdekat.
+
+---
+
+## 🛠️ Tech Stack
+
+**Frontend:**
+* ![React](https://img.shields.io/badge/react-%2320232a.svg?style=flat&logo=react&logoColor=%2361DAFB) React + Vite
+* ![React Router](https://img.shields.io/badge/React_Router-CA4245?style=flat&logo=react-router&logoColor=white) React Router DOM
+* ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=flat&logo=css3&logoColor=white) CSS3 & SVG Assets
+
+**Backend:**
+* ![Python](https://img.shields.io/badge/python-3670A0?style=flat&logo=python&logoColor=ffdd54) Python 3.10+
+* **Pyramid Framework:** Framework web Python yang fleksibel.
+* **SQLAlchemy:** ORM untuk interaksi database.
+* **Waitress:** WSGI server untuk production/development.
+
+**Database & Tools:**
+* ![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=flat&logo=postgresql&logoColor=white) PostgreSQL (Neon Tech)
+* **Cloudinary:** Penyimpanan media/gambar.
+
+---
+
+## 🚀 Instalasi & Menjalankan (Local Development)
 
 Dokumentasi ini menjelaskan cara menjalankan aplikasi EduPlatform di komputer lokal (Local Environment). Aplikasi ini dibangun menggunakan **Python (Pyramid Framework)** dan menggunakan database **PostgreSQL (Neon Console)**.
 
@@ -74,4 +150,48 @@ Buka browser dan akses: http://localhost:8080
 
 ### Frontend 
 https://uas-paw-kelompok6-eduplatform.vercel.app/
+
+## 📡 Dokumentasi API (Endpoints)
+
+Format Request & Response umumnya menggunakan JSON.
+
+| Method | Endpoint | Deskripsi | Auth Required |
+| --- | --- | --- | --- |
+| **POST** | `/auth/register` | Mendaftar akun baru (Student/Instructor) | No |
+| **POST** | `/auth/login` | Masuk ke sistem dan mendapatkan token | No |
+| **GET** | `/courses` | Mengambil semua daftar kursus | Yes |
+| **POST** | `/courses` | Membuat kursus baru (Instructor Only) | Yes |
+| **GET** | `/courses/{id}` | Melihat detail kursus tertentu | Yes |
+| **POST** | `/courses/{id}/enroll` | Mendaftar ke dalam kursus | Yes |
+| **GET** | `/users/my-courses` | Melihat kursus yang diikuti user saat ini | Yes |
+| **POST** | `/modules` | Menambahkan materi ke kursus | Yes |
+
+## 📸 Dokumentasi Website
+
+Berikut adalah tampilan antarmuka aplikasi EduPlatform:
+
+### 👨‍🎓 Tampilan Siswa (Student View)
+
+| Dashboard Pembelajaran | Kursus Saya |
+| :---: | :---: |
+| ![Dashboard Siswa](documentation/DashboardSiswa.jpg) | ![Kursus Saya](documentation/KursusSaya.jpg) |
+| *Ringkasan aktivitas belajar siswa* | *Daftar kursus yang sedang diikuti* |
+
+**Timeline Deadline**
+![Timeline Deadline](documentation/timeline.png)
+*Fitur pemantauan deadline tugas dan kursus*
+
+### 👨‍🏫 Tampilan Instruktur (Instructor View)
+
+| Dashboard Instruktur | Manajemen Kursus |
+| :---: | :---: |
+| ![Dashboard Instruktur](documentation/DashboardInstruktur.jpg) | ![Manajemen Instruktur](documentation/ManajemenInstruktur.jpg) |
+| *Statistik ringkas untuk pengajar* | *Menu pengelolaan kelas dan materi* |
+
+### 🏠 Halaman Utama (General)
+![Halaman Utama](documentation/Dashboard.jpg)
+*Katalog kursus yang tersedia untuk dijelajahi*
+
+---
+Made with ❤️ by Kelompok 6
 
