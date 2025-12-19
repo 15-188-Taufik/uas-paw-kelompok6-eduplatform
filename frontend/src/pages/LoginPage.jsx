@@ -7,31 +7,55 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Tambah state loading
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true); // Mulai loading
+
     try {
-      const response = await api.post('/login', { email, password });
-      if (response.data.success) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        const target = response.data.user.role === 'instructor' ? '/instructor-dashboard' : '/student-dashboard';
+      // [PERBAIKAN 1] Sesuaikan Endpoint ke /api/login
+      const response = await api.post('/api/login', { email, password });
+      
+      console.log("Respon Login:", response.data); // Debugging
+
+      // [PERBAIKAN 2] Sesuaikan Pengecekan status dengan Backend (default.py)
+      // Backend mengirim: { status: 'success', data: { ... } }
+      if (response.data.status === 'success') {
+        
+        // [PERBAIKAN 3] Ambil data user dari 'data', bukan 'user'
+        const userData = response.data.data;
+
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('role', userData.role); // Simpan role juga biar gampang
+
+        // Redirect sesuai role
+        const target = userData.role === 'instructor' ? '/instructor-dashboard' : 
+                       userData.role === 'admin' ? '/admin-dashboard' : 
+                       '/student-dashboard';
+        
         navigate(target);
+      } else {
+        setError(response.data.message || 'Login gagal.');
       }
+
     } catch (err) {
       console.error(err);
       if (err.response) {
         if (err.response.status === 401) {
           setError('Password atau Email salah.');
         } else {
-          setError(`Terjadi kesalahan: ${err.response.data.error || err.response.statusText}`);
+          setError(`Terjadi kesalahan: ${err.response.data.message || err.response.statusText}`);
         }
       } else if (err.request) {
         setError('Gagal terhubung ke server. Pastikan Backend berjalan.');
       } else {
         setError('Terjadi kesalahan sistem.');
       }
+    } finally {
+        setLoading(false); // Stop loading
     }
   };
 
@@ -122,7 +146,6 @@ const LoginPage = () => {
           </div>
 
           <div>
-            {/* Bagian Lupa Password Dihapus, label dibuat block biasa */}
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '13px', color: colors.textDark }}>PASSWORD</label>
             <input 
               type="password" 
@@ -137,27 +160,28 @@ const LoginPage = () => {
 
           <button 
             type="submit" 
+            disabled={loading}
             style={{ 
               padding: '14px', 
-              backgroundColor: colors.primary, 
+              backgroundColor: loading ? '#ccc' : colors.primary, 
               color: 'white', 
               border: 'none', 
               borderRadius: '14px', 
               fontSize: '16px', 
               fontWeight: '600', 
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               marginTop: '10px',
               transition: 'all 0.2s ease',
-              boxShadow: `0 8px 20px rgba(255, 126, 62, 0.2)`
+              boxShadow: loading ? 'none' : `0 8px 20px rgba(255, 126, 62, 0.2)`
             }}
-            onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-            onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+            onMouseOver={(e) => !loading && (e.target.style.transform = 'translateY(-2px)')}
+            onMouseOut={(e) => !loading && (e.target.style.transform = 'translateY(0)')}
           >
-            Masuk
+            {loading ? 'Memproses...' : 'Masuk'}
           </button>
         </form>
 
-        {/* DIVIDER ATAU PEMBATAS */}
+        {/* DIVIDER */}
         <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0', color: colors.textLight }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#EAEAEA' }}></div>
             <span style={{ padding: '0 10px', fontSize: '12px' }}>atau masuk dengan</span>
@@ -187,7 +211,6 @@ const LoginPage = () => {
             onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
         >
-            {/* Google Icon SVG */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
