@@ -63,6 +63,9 @@ const StudentDashboard = () => {
   // Kursus yang terakhir diakses atau aktif
   const lastActiveCourse = courses.find(c => (c.progress || 0) > 0 && (c.progress || 0) < 100) || courses[0];
   
+  // Kursus yang sedang berlangsung (untuk section Lanjutkan Pembelajaran)
+  const continueLearningCourses = courses.filter(c => (c.progress || 0) > 0 && (c.progress || 0) < 100).slice(0, 3);
+  
   // Kursus dengan progress tertinggi
   const topCourses = [...courses].sort((a, b) => (b.progress || 0) - (a.progress || 0)).slice(0, 3);
 
@@ -216,7 +219,7 @@ const StudentDashboard = () => {
                   Lanjutkan Pembelajaran
                 </h5>
               </div>
-              {lastActiveCourse && (
+              {continueLearningCourses.length > 0 && (
                 <button
                   className="btn btn-sm"
                   style={{ 
@@ -234,118 +237,238 @@ const StudentDashboard = () => {
               )}
             </div>
 
-            {lastActiveCourse ? (
-              <div
-                className="card border-0 overflow-hidden"
-                style={{ 
-                  borderRadius: '20px', 
-                  boxShadow: theme.shadow,
-                  transition: 'all 0.3s ease',
-                  background: `linear-gradient(135deg, ${theme.white}, ${theme.primarySoft})`
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = theme.shadowHeavy;
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = theme.shadow;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div className="row g-0">
-                  <div className="col-md-5 position-relative overflow-hidden">
-                    <img
-                      src={lastActiveCourse.thumbnail_url || 'https://via.placeholder.com/700x450?text=Course'}
-                      alt="Thumbnail"
-                      className="w-100 h-100"
-                      style={{ objectFit: 'cover', minHeight: 260, transition: 'transform 0.3s ease' }}
-                    />
-                    {/* Overlay Badge */}
-                    <div style={{ 
-                      position: 'absolute', 
-                      top: '16px', 
-                      right: '16px',
-                      backgroundColor: theme.white,
-                      color: theme.primary,
-                      padding: '8px 16px',
-                      borderRadius: '50px',
-                      fontWeight: '700',
-                      fontSize: '12px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                    }}>
-                      {lastActiveCourse.category || 'Umum'}
-                    </div>
-                  </div>
-
-                  <div className="col-md-7 d-flex flex-column justify-content-between">
-                    <div className="p-4">
-                      <h3 style={{ fontWeight: '800', color: theme.textMain, marginBottom: '12px', fontSize: '20px', lineHeight: 1.3 }}>
-                        {lastActiveCourse.title}
-                      </h3>
-                      
-                      <p style={{ color: theme.textMuted, fontSize: '13px', marginBottom: '16px', lineHeight: 1.5 }}>
-                        <i className="bi bi-person-circle me-2" style={{ color: theme.primary }}></i>
-                        {lastActiveCourse.instructor_name || 'Instruktur'}
-                      </p>
-
-                      {/* Advanced Progress Bar */}
-                      <div>
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                          <small style={{ color: theme.textSec, fontWeight: '600', fontSize: '12px' }}>Progress Belajar</small>
-                          <small style={{ color: theme.primary, fontWeight: '800', fontSize: '13px' }}>
-                            {lastActiveCourse.progress || 0}%
-                          </small>
-                        </div>
-                        <div style={{ 
-                          height: '10px', 
-                          borderRadius: '10px', 
-                          backgroundColor: theme.border,
-                          overflow: 'hidden',
-                          position: 'relative'
-                        }}>
-                          <div
-                            style={{ 
-                              width: `${lastActiveCourse.progress || 0}%`, 
-                              height: '100%', 
-                              backgroundColor: getProgressColor(lastActiveCourse.progress || 0),
-                              borderRadius: '10px',
-                              transition: 'width 0.5s ease',
-                              boxShadow: `0 0 10px ${getProgressColor(lastActiveCourse.progress || 0)}40`
-                            }}
-                          />
-                        </div>
+            {continueLearningCourses.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Featured Card (First Course) */}
+                <div
+                  className="card border-0 overflow-hidden"
+                  style={{ 
+                    borderRadius: '20px', 
+                    boxShadow: theme.shadow,
+                    transition: 'all 0.3s ease',
+                    background: `linear-gradient(135deg, ${theme.white}, ${theme.primarySoft})`
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = theme.shadowHeavy;
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = theme.shadow;
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <div className="row g-0">
+                    <div className="col-md-5 position-relative overflow-hidden">
+                      <img
+                        src={continueLearningCourses[0].thumbnail_url || 'https://via.placeholder.com/700x450?text=Course'}
+                        alt="Thumbnail"
+                        className="w-100 h-100"
+                        style={{ objectFit: 'cover', minHeight: 260, transition: 'transform 0.3s ease' }}
+                      />
+                      {/* Overlay Badge */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: '16px', 
+                        right: '16px',
+                        backgroundColor: theme.white,
+                        color: theme.primary,
+                        padding: '8px 16px',
+                        borderRadius: '50px',
+                        fontWeight: '700',
+                        fontSize: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                      }}>
+                        {continueLearningCourses[0].category || 'AI'}
                       </div>
                     </div>
 
-                    <div className="p-4 pt-0">
-                      <button
-                        onClick={() => navigate(`/course/${lastActiveCourse.id}`)}
-                        className="btn w-100"
-                        style={{ 
-                          backgroundColor: theme.primary, 
-                          color: 'white', 
-                          fontWeight: '700',
-                          padding: '12px 20px',
-                          borderRadius: '12px',
-                          border: 'none',
-                          boxShadow: `0 4px 15px ${theme.primary}40`,
-                          transition: 'all 0.2s ease',
-                          fontSize: '14px'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.transform = 'translateY(-2px)';
-                          e.target.style.boxShadow = `0 6px 20px ${theme.primary}60`;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = `0 4px 15px ${theme.primary}40`;
-                        }}
-                      >
-                        <i className="bi bi-play-fill me-2"></i> Lanjut Belajar
-                      </button>
+                    <div className="col-md-7 d-flex flex-column justify-content-between">
+                      <div className="p-4">
+                        <h3 style={{ fontWeight: '800', color: theme.textMain, marginBottom: '12px', fontSize: '20px', lineHeight: 1.3 }}>
+                          {continueLearningCourses[0].title}
+                        </h3>
+                        
+                        <p style={{ color: theme.textMuted, fontSize: '13px', marginBottom: '16px', lineHeight: 1.5 }}>
+                          <i className="bi bi-person-circle me-2" style={{ color: theme.primary }}></i>
+                          {continueLearningCourses[0].instructor_name || 'Pak Dosen'}
+                        </p>
+
+                        {/* Advanced Progress Bar */}
+                        <div>
+                          <div className="d-flex justify-content-between align-items-center mb-2">
+                            <small style={{ color: theme.textSec, fontWeight: '600', fontSize: '12px' }}>Progress Belajar</small>
+                            <small style={{ color: theme.primary, fontWeight: '800', fontSize: '13px' }}>
+                              {continueLearningCourses[0].progress || 0}%
+                            </small>
+                          </div>
+                          <div style={{ 
+                            height: '10px', 
+                            borderRadius: '10px', 
+                            backgroundColor: theme.border,
+                            overflow: 'hidden',
+                            position: 'relative'
+                          }}>
+                            <div
+                              style={{ 
+                                width: `${continueLearningCourses[0].progress || 0}%`, 
+                                height: '100%', 
+                                backgroundColor: getProgressColor(continueLearningCourses[0].progress || 0),
+                                borderRadius: '10px',
+                                transition: 'width 0.5s ease',
+                                boxShadow: `0 0 10px ${getProgressColor(continueLearningCourses[0].progress || 0)}40`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 pt-0">
+                        <button
+                          onClick={() => navigate(`/course/${continueLearningCourses[0].id}`)}
+                          className="btn w-100"
+                          style={{ 
+                            backgroundColor: theme.primary, 
+                            color: 'white', 
+                            fontWeight: '700',
+                            padding: '12px 20px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            boxShadow: `0 4px 15px ${theme.primary}40`,
+                            transition: 'all 0.2s ease',
+                            fontSize: '14px'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = `0 6px 20px ${theme.primary}60`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = `0 4px 15px ${theme.primary}40`;
+                          }}
+                        >
+                          <i className="bi bi-play-fill me-2"></i> Lanjut Belajar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Additional Course Cards (2nd and 3rd courses) */}
+                {continueLearningCourses.slice(1, 3).map((course, idx) => (
+                  <div
+                    key={course.id}
+                    className="card border-0 overflow-hidden"
+                    style={{ 
+                      borderRadius: '20px', 
+                      boxShadow: theme.shadow,
+                      transition: 'all 0.3s ease',
+                      background: theme.white
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = theme.shadowHeavy;
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = theme.shadow;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div className="row g-0">
+                      <div className="col-md-5 position-relative overflow-hidden">
+                        <img
+                          src={course.thumbnail_url || 'https://via.placeholder.com/700x450?text=Course'}
+                          alt="Thumbnail"
+                          className="w-100 h-100"
+                          style={{ objectFit: 'cover', minHeight: 260, transition: 'transform 0.3s ease' }}
+                        />
+                        {/* Overlay Badge */}
+                        <div style={{ 
+                          position: 'absolute', 
+                          top: '16px', 
+                          right: '16px',
+                          backgroundColor: theme.white,
+                          color: theme.primary,
+                          padding: '8px 16px',
+                          borderRadius: '50px',
+                          fontWeight: '700',
+                          fontSize: '12px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                        }}>
+                          {course.category || 'Umum'}
+                        </div>
+                      </div>
+
+                      <div className="col-md-7 d-flex flex-column justify-content-between">
+                        <div className="p-4">
+                          <h3 style={{ fontWeight: '800', color: theme.textMain, marginBottom: '12px', fontSize: '20px', lineHeight: 1.3 }}>
+                            {course.title}
+                          </h3>
+                          
+                          <p style={{ color: theme.textMuted, fontSize: '13px', marginBottom: '16px', lineHeight: 1.5 }}>
+                            <i className="bi bi-person-circle me-2" style={{ color: theme.primary }}></i>
+                            {course.instructor_name || 'Instruktur'}
+                          </p>
+
+                          {/* Advanced Progress Bar */}
+                          <div>
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                              <small style={{ color: theme.textSec, fontWeight: '600', fontSize: '12px' }}>Progress Belajar</small>
+                              <small style={{ color: theme.primary, fontWeight: '800', fontSize: '13px' }}>
+                                {course.progress || 0}%
+                              </small>
+                            </div>
+                            <div style={{ 
+                              height: '10px', 
+                              borderRadius: '10px', 
+                              backgroundColor: theme.border,
+                              overflow: 'hidden',
+                              position: 'relative'
+                            }}>
+                              <div
+                                style={{ 
+                                  width: `${course.progress || 0}%`, 
+                                  height: '100%', 
+                                  backgroundColor: getProgressColor(course.progress || 0),
+                                  borderRadius: '10px',
+                                  transition: 'width 0.5s ease',
+                                  boxShadow: `0 0 10px ${getProgressColor(course.progress || 0)}40`
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-4 pt-0">
+                          <button
+                            onClick={() => navigate(`/course/${course.id}`)}
+                            className="btn w-100"
+                            style={{ 
+                              backgroundColor: theme.primary, 
+                              color: 'white', 
+                              fontWeight: '700',
+                              padding: '12px 20px',
+                              borderRadius: '12px',
+                              border: 'none',
+                              boxShadow: `0 4px 15px ${theme.primary}40`,
+                              transition: 'all 0.2s ease',
+                              fontSize: '14px'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.transform = 'translateY(-2px)';
+                              e.target.style.boxShadow = `0 6px 20px ${theme.primary}60`;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.transform = 'translateY(0)';
+                              e.target.style.boxShadow = `0 4px 15px ${theme.primary}40`;
+                            }}
+                          >
+                            <i className="bi bi-play-fill me-2"></i> Lanjut Belajar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="card border-0 p-5 text-center" style={{ borderRadius: '20px', boxShadow: theme.shadow }}>
