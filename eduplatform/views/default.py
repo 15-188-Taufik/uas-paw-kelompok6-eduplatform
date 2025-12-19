@@ -587,35 +587,39 @@ def enroll_course(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # --- [BARU] FUNGSI UNENROLL ---
-@view_config(route_name='unenroll', renderer='json', request_method='POST')
-def unenroll_course(request):
+# --- TAMBAHKAN KODE INI DI BAGIAN BAWAH ---
+
+@view_config(route_name='api_unenroll', renderer='json', request_method='POST')
+def api_unenroll(request):
     try:
-        data = request.json_body
-        student_id = data.get('student_id')
-        course_id = data.get('course_id')
+        # 1. Ambil data dari Body Request
+        payload = request.json_body
+        user_id = payload.get('user_id')
+        course_id = payload.get('course_id')
 
-        # Cari data enrollment
-        enrollment = request.dbsession.query(Enrollment).filter_by(
-            student_id=student_id, 
-            course_id=course_id
-        ).first()
+        if not user_id or not course_id:
+            request.response.status = 400
+            return {'status': 'error', 'message': 'User ID dan Course ID wajib ada'}
 
-        if not enrollment:
-            return HTTPNotFound(json_body={'error': 'Data pendaftaran tidak ditemukan'})
+        # 2. Cari data Enrollment di Database
+        session = request.dbsession
+        enrollment = session.query(Enrollment).filter_by(user_id=user_id, course_id=course_id).first()
 
-        # Hapus data
-        request.dbsession.delete(enrollment)
-        
-        # Opsional: Jika ingin menghapus progress (LessonCompletion) juga, uncomment ini:
-        # request.dbsession.query(LessonCompletion).filter_by(student_id=student_id).filter(
-        #     LessonCompletion.lesson.has(module=Module.course_id == course_id)
-        # ).delete(synchronize_session=False)
+        # 3. Jika ada, Hapus
+        if enrollment:
+            session.delete(enrollment)
+            # Transaction otomatis di-commit oleh Pyramid tm
+            return {'status': 'success', 'message': 'Berhasil keluar dari kursus'}
+        else:
+            request.response.status = 404
+            return {'status': 'error', 'message': 'Anda belum terdaftar di kursus ini'}
 
-        return {'success': True, 'message': 'Berhasil keluar dari kursus'}
-        
+    except DBAPIError:
+        request.response.status = 500
+        return {'status': 'error', 'message': 'Database error'}
     except Exception as e:
-        return HTTPBadRequest(json_body={'error': str(e)})
-
+        request.response.status = 500
+        return {'status': 'error', 'message': str(e)}
 # ==========================================
 # GANTI FUNGSI INI DI default.py
 # ==========================================
@@ -772,7 +776,7 @@ def get_student_timeline(request):
         })
         
     return {'timeline': timeline_data}
-    
+
 @view_config(route_name='complete_lesson', renderer='json', request_method='POST')
 def complete_lesson(request):
     lesson_id = request.matchdict['lesson_id']
