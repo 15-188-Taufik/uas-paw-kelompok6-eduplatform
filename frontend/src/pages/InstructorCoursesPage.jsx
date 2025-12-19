@@ -33,7 +33,8 @@ const InstructorCoursesPage = () => {
 
   const fetchCourses = async () => {
     try {
-      const response = await api.get(`/instructors/${user.id}/courses`);
+      // [PERBAIKAN] Tambah /api di depan
+      const response = await api.get(`/api/instructors/${user.id}/courses`);
       setCourses(response.data.courses);
     } catch (err) {
       console.error(err);
@@ -71,7 +72,8 @@ const InstructorCoursesPage = () => {
         formData.append('thumbnail_file', newCourse.thumbnail_file);
       }
 
-      await api.post('/courses', formData, {
+      // [PERBAIKAN] Tambah /api di depan
+      await api.post('/api/courses', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -113,7 +115,8 @@ const InstructorCoursesPage = () => {
 
     if (result.isConfirmed) {
         try {
-            await api.delete(`/courses/${courseId}`);
+            // [PERBAIKAN] Tambah /api di depan
+            await api.delete(`/api/courses/${courseId}`);
             fetchCourses();
             Swal.fire({ title: 'Terhapus!', icon: 'success', timer: 1500, showConfirmButton: false });
         } catch(err) {
