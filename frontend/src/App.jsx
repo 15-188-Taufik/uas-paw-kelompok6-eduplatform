@@ -13,6 +13,7 @@ import ManageCoursePage from './pages/ManageCoursePage';
 import GradingPage from './pages/GradingPage';
 import StudentDashboard from './pages/StudentDashboard';
 import InstructorCoursesPage from './pages/InstructorCoursesPage';
+import CourseStudentsPage from './pages/CourseStudentsPage';
 import TimelinePage from './pages/TimelinePage';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
           <Route path="/instructor-dashboard" element={<InstructorDashboard />} />
           <Route path="/create-course" element={<CreateCoursePage />} />
           <Route path="/instructor-courses" element={<InstructorCoursesPage />} />
+          <Route path="/course-students/:courseId" element={<CourseStudentsPage />} />
           <Route path="/manage-course/:id" element={<ManageCoursePage />} />
         </Routes>
       </div>

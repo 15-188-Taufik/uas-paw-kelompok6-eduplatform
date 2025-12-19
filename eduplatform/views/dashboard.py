@@ -6,11 +6,12 @@ from ..models import Course, Module, Assignment, Submission
 @view_config(route_name='api_instructor_dashboard', renderer='json', request_method='GET')
 def api_instructor_dashboard(request):
     # Hardcode user sementara
-    current_instructor_id = 1 
-    
-    # 1. Query Courses + Modules + Assignments
+    current_instructor_id = 1
+
+    # 1. Query Courses + Modules + Assignments + Enrollments
     courses = request.dbsession.query(Course)\
         .options(joinedload(Course.modules).joinedload(Module.assignments))\
+        .options(joinedload(Course.enrollments).joinedload(Enrollment.student))\
         .filter(Course.instructor_id == current_instructor_id)\
         .order_by(Course.created_at.desc())\
         .all()
@@ -46,12 +47,15 @@ def api_instructor_dashboard(request):
                 'assignments': assignments_data
             })
 
+        enrolled_students = [{'id': e.student.id, 'name': e.student.name, 'email': e.student.email} for e in c.enrollments]
+
         courses_data.append({
             'id': c.id,
             'title': c.title,
             'category': c.category,
             'price': float(c.price) if c.price else 0,
-            'modules': modules_data
+            'modules': modules_data,
+            'enrolled_students': enrolled_students
         })
 
     return {

@@ -175,18 +175,25 @@ const InstructorCoursesPage = () => {
                                         </p>
                                     </div>
                                     <div className="col-md-3 col-12 mt-3 mt-md-0 d-flex flex-row flex-md-column gap-2 justify-content-end">
-                                        <button 
+                                        <button
                                             onClick={() => navigate(`/manage-course/${course.id}`)}
                                             className="btn btn-sm fw-bold rounded-pill"
                                             style={{border: `1px solid ${theme.primary}`, color: theme.primary}}
                                         >
                                             <i className="bi bi-collection-play me-1"></i> Materi
                                         </button>
+                                        <button
+                                            onClick={() => navigate(`/course-students/${course.id}`)}
+                                            className="btn btn-sm fw-bold rounded-pill"
+                                            style={{border: `1px solid ${theme.primary}`, color: theme.primary}}
+                                        >
+                                            <i className="bi bi-people me-1"></i> Siswa
+                                        </button>
                                         <div className="d-flex gap-2">
                                             <button className="btn btn-sm btn-light border flex-grow-1 rounded-pill" title="Edit Info">
                                                 <i className="bi bi-pencil-square"></i> Info
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleDeleteCourse(course.id)}
                                                 className="btn btn-sm btn-light border text-danger rounded-pill"
                                                 title="Hapus"

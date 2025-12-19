@@ -1,0 +1,4 @@
+- [ ] Modify dashboard.py to include enrolled_students in API response
+- [ ] Add route for CourseStudentsPage in App.jsx
+- [ ] Add "View Students" button in InstructorCoursesPage for each course
+- [ ] Test the feature
