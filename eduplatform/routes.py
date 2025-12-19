@@ -4,13 +4,11 @@ def includeme(config):
 
     config.add_static_view('static', 'static', cache_max_age=3600)
     config.add_route('home', '/')
-
-    config.add_route('login', '/api/login')
-    config.add_route('register', '/api/register')
     
     # --- 1. USERS & AUTH ---
     config.add_route('register', '/api/register')
     config.add_route('login', '/api/login')
+    config.add_route('users', '/api/users')
     
     # Route Legacy (Biar aman kalau ada kode lama yang panggil nama ini)
     config.add_route('api_register', '/api/register')
