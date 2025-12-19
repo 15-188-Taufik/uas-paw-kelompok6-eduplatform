@@ -172,7 +172,7 @@ Berikut adalah tampilan antarmuka aplikasi EduPlatform:
 
 | Dashboard Pembelajaran | Kursus Saya |
 | :---: | :---: |
-| ![Dashboard Siswa](documentation/DashboardSiswa.jpg) | ![Kursus Saya](documentation/KursusSaya.png) |
+| ![Dashboard Siswa](documentation/DashboardSiswa.png) | ![Kursus Saya](documentation/KursusSaya.png) |
 | *Ringkasan aktivitas belajar siswa* | *Daftar kursus yang sedang diikuti* |
 
 **Timeline Deadline**
