@@ -1,10 +1,17 @@
 // src/api/axios.js
 import axios from 'axios';
 
-// Kita buat instance axios khusus
+// Instance axios khusus
 const api = axios.create({
-  // Jika ada env VITE_API_URL (di Vercel), pakai itu. Jika tidak, pakai localhost.
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:6543/api',
+  // [PERBAIKAN 1] Sesuaikan nama variabel dengan yang ada di Vercel (VITE_API_BASE_URL)
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:6543/api',
+  
+  // [PERBAIKAN 2] Wajib tambahkan ini agar login/session jalan (Cookie)
+  withCredentials: true, 
+  
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 export default api;
