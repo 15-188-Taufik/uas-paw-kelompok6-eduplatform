@@ -155,7 +155,7 @@ Format Request & Response umumnya menggunakan JSON.
 
 | Method | Endpoint | Deskripsi | Auth Required |
 | --- | --- | --- | --- |
-| **POST** | `/auth/register` | Mendaftar akun baru (Student/Instructor) | No |
+| **POST** | `/auth/register` | Mendaftar akun baru (Student/Instructor) | Yes |
 | **POST** | `/auth/login` | Masuk ke sistem dan mendapatkan token | No |
 | **GET** | `/courses` | Mengambil semua daftar kursus | Yes |
 | **POST** | `/courses` | Membuat kursus baru (Instructor Only) | Yes |
