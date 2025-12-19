@@ -4,24 +4,20 @@ import Swal from 'sweetalert2';
 import api from '../api/axios';
 
 const LessonPage = () => {
-  // Destructure params sesuai router Anda
   const { id, moduleId, courseId } = useParams();
   const navigate = useNavigate();
   
-  // State Management
   const [lesson, setLesson] = useState(null);
   const [course, setCourse] = useState(null);
-  const [modules, setModules] = useState([]); // Array ini harus berisi detail lessons
+  const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   
-  // Ambil user dari LocalStorage
   const user = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
   }, []);
 
-  // --- THEME CONFIGURATION ---
   const theme = {
     primary: '#FF7E3E',
     primaryLight: '#FFF5F1',
@@ -43,55 +39,46 @@ const LessonPage = () => {
     shadowXS: '0 2px 8px rgba(0,0,0,0.05)'
   };
 
-  // --- ANIMATIONS & STYLES ---
   const styles = `
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
     .lesson-page-animate { animation: fadeInUp 0.6s ease-out; }
     .sidebar-animate { animation: slideInRight 0.6s ease-out; }
-    
-    /* Custom Scrollbar for Sidebar */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF7E3E; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D55A1E; }
-    
-    /* SweetAlert Custom Font */
     div:where(.swal2-container) {
       font-family: 'Poppins', sans-serif !important;
     }
   `;
 
-  // --- MAIN EFFECT: DATA FETCHING ---
   useEffect(() => {
     const fetchLessonData = async () => {
       try {
         setLoading(true);
         
-        // 1. Ambil Detail Lesson saat ini
-        const endpoint = user ? `/lessons/${id}?student_id=${user.id}` : `/lessons/${id}`;
+        // [PERBAIKAN] Tambah /api
+        const endpoint = user ? `/api/lessons/${id}?student_id=${user.id}` : `/api/lessons/${id}`;
         const res = await api.get(endpoint);
         
         setLesson(res.data.lesson);
-        // Set status completed dari database (Persistent)
         setIsCompleted(res.data.lesson.completed || false);
         
-        // 2. Tentukan Course ID yang aktif
         const activeCourseId = courseId || res.data.lesson.course_id;
 
-        // 3. Ambil Detail Course & Modules (Beserta Isinya)
         if (activeCourseId) {
-          const courseRes = await api.get(`/courses/${activeCourseId}`);
+          // [PERBAIKAN] Tambah /api
+          const courseRes = await api.get(`/api/courses/${activeCourseId}`);
           setCourse(courseRes.data.course);
           
-          // Ambil daftar modul
-          const modulesRes = await api.get(`/courses/${activeCourseId}/modules`);
+          const modulesRes = await api.get(`/api/courses/${activeCourseId}/modules`);
           
           const detailedModules = await Promise.all(
             modulesRes.data.modules.map(async (mod) => {
                try {
-                 const lessonsRes = await api.get(`/modules/${mod.id}/lessons`);
+                 const lessonsRes = await api.get(`/api/modules/${mod.id}/lessons`);
                  return { 
                     ...mod, 
                     lessons: lessonsRes.data.lessons || [] 
@@ -114,22 +101,19 @@ const LessonPage = () => {
     fetchLessonData();
   }, [id, courseId, user?.id]);
 
-  // --- LOGIC: AUTO NEXT LESSON ---
   const goToNextLesson = () => {
     if (!modules || modules.length === 0) return;
 
     let foundCurrent = false;
     let nextLessonId = null;
 
-    // Loop Nested: Modules -> Lessons
     for (const mod of modules) {
         if (mod.lessons && mod.lessons.length > 0) {
             for (const l of mod.lessons) {
                 if (foundCurrent) {
                     nextLessonId = l.id;
-                    break; // Ketemu lesson berikutnya!
+                    break;
                 }
-                // Pakai String() biar aman
                 if (String(l.id) === String(lesson.id)) {
                     foundCurrent = true;
                 }
@@ -139,7 +123,6 @@ const LessonPage = () => {
     }
 
     if (nextLessonId) {
-        // Redirect ke lesson berikutnya
         const targetUrl = courseId 
             ? `/course/${courseId}/lesson/${nextLessonId}` 
             : `/lesson/${nextLessonId}`;
@@ -147,7 +130,6 @@ const LessonPage = () => {
         navigate(targetUrl);
         window.scrollTo(0, 0);
     } else {
-        // SweetAlert: Akhir Kursus
         Swal.fire({
             title: '🎉 Kursus Selesai!',
             text: 'Selamat! Anda telah mencapai akhir materi kursus ini.',
@@ -158,16 +140,15 @@ const LessonPage = () => {
     }
   };
 
-  // --- LOGIC: MARK AS COMPLETE ---
   const handleComplete = async () => {
     if (!user) return;
     try {
-      await api.post(`/lessons/${id}/complete`, {
+      // [PERBAIKAN] Tambah /api
+      await api.post(`/api/lessons/${id}/complete`, {
         student_id: user.id
       });
       setIsCompleted(true);
       
-      // SweetAlert: Konfirmasi Pindah
       Swal.fire({
           title: 'Materi Selesai! ✅',
           text: "Ingin lanjut ke materi berikutnya sekarang?",
@@ -194,22 +175,19 @@ const LessonPage = () => {
     }
   };
 
-  // --- HELPER: Proxy Download ---
+  // [PERBAIKAN] Tambah /api pada proxy_download
   const getProxyDownloadUrl = (fileUrl) => {
     if (!fileUrl) return '#';
-    return `${api.defaults.baseURL}/proxy_download?url=${encodeURIComponent(fileUrl)}`;
+    return `${api.defaults.baseURL}/api/proxy/download?url=${encodeURIComponent(fileUrl)}`;
   };
 
-  // --- HELPER: Google Viewer URL ---
   const getGoogleViewerUrl = (fileUrl) => {
      return `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
   };
 
-  // --- RENDERER: CONTENT TYPES ---
   const renderContent = (url) => {
     if (!url) return null;
 
-    // 1. Youtube Embed
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       let embedUrl = url.replace('watch?v=', 'embed/');
       if (url.includes('youtu.be/')) embedUrl = url.replace('youtu.be/', 'youtube.com/embed/');
@@ -226,13 +204,11 @@ const LessonPage = () => {
       );
     }
 
-    // Ambil ekstensi file
     let extension = 'FILE';
     if (url.includes('.')) {
         extension = url.split('.').pop().toLowerCase();
     }
 
-    // 2. Video Player (.mp4, .webm)
     if (['mp4', 'webm', 'ogg', 'mov'].includes(extension)) {
         return (
             <div className="ratio ratio-16x9 bg-dark rounded overflow-hidden shadow mb-4">
@@ -244,7 +220,6 @@ const LessonPage = () => {
         );
     }
 
-    // 3. Gambar (.jpg, .png)
     if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension)) {
         return (
             <div className="text-center mb-4">
@@ -253,11 +228,9 @@ const LessonPage = () => {
         );
     }
 
-    // 4. DOCUMENT VIEWER (PDF, WORD, PPT, EXCEL)
     if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'].includes(extension)) {
         return (
             <div className="mb-4">
-                {/* Area Viewer */}
                 <div className="ratio ratio-4x3 shadow rounded overflow-hidden border bg-light mb-3">
                     <iframe 
                         src={getGoogleViewerUrl(url)} 
@@ -266,7 +239,6 @@ const LessonPage = () => {
                         frameBorder="0"
                     ></iframe>
                 </div>
-                {/* Tombol Download Cadangan */}
                 <div className="text-center">
                     <a 
                         href={getProxyDownloadUrl(url)} 
@@ -280,7 +252,6 @@ const LessonPage = () => {
         );
     }
 
-    // 5. Default (ZIP/RAR/Lainnya) -> Hanya Download
     return (
         <div className="card mb-4 border-0 shadow-sm" style={{backgroundColor: '#f8f9fa'}}>
             <div className="card-body p-4 d-flex align-items-center">
@@ -305,7 +276,6 @@ const LessonPage = () => {
     );
   };
 
-  // --- LOADING STATE ---
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -317,7 +287,6 @@ const LessonPage = () => {
     );
   }
 
-  // --- ERROR STATE ---
   if (!lesson) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: theme.bg }}>
@@ -339,7 +308,6 @@ const LessonPage = () => {
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', paddingBottom: '60px' }}>
       <style>{styles}</style>
       
-      {/* --- HERO HEADER --- */}
       <div style={{
         background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryDark} 100%)`,
         color: theme.white, padding: '28px 24px', position: 'sticky', top: '64px', zIndex: 100,
@@ -364,14 +332,11 @@ const LessonPage = () => {
         </div>
       </div>
 
-      {/* --- MAIN LAYOUT GRID --- */}
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: sidebarOpen ? '1fr 320px' : '1fr', gap: '40px', transition: 'all 0.3s ease' }}>
           
-          {/* --- LEFT: MAIN CONTENT AREA --- */}
           <div className="lesson-page-animate">
             
-            {/* Video / Content Player */}
             <div style={{
               backgroundColor: theme.white, borderRadius: '16px', overflow: 'hidden',
               boxShadow: theme.shadowMedium, marginBottom: '32px', border: `1px solid ${theme.border}`,
@@ -382,7 +347,6 @@ const LessonPage = () => {
               </div>
             </div>
 
-            {/* Description Card */}
             <div style={{
               backgroundColor: theme.white, borderRadius: '16px', padding: '32px',
               boxShadow: theme.shadowSoft, marginBottom: '32px', border: `1px solid ${theme.border}`
@@ -406,7 +370,6 @@ const LessonPage = () => {
               </div>
             </div>
 
-            {/* Action Buttons (Complete / Next) */}
             <div style={{ textAlign: 'center', paddingTop: '8px' }}>
               <button 
                 onClick={handleComplete}
@@ -428,7 +391,6 @@ const LessonPage = () => {
                 )}
               </button>
 
-              {/* Tombol Lanjut Manual */}
               {isCompleted && (
                   <div style={{marginTop: '20px'}}>
                       <button 
@@ -443,11 +405,9 @@ const LessonPage = () => {
             </div>
           </div>
 
-          {/* --- RIGHT: SIDEBAR (NAVIGATION) --- */}
           {sidebarOpen && (
             <div className="sidebar-animate" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
-              {/* Course Info Card */}
               {course && (
                 <div style={{
                   backgroundColor: theme.white, borderRadius: '16px', padding: '24px',
@@ -469,7 +429,6 @@ const LessonPage = () => {
                 </div>
               )}
 
-              {/* Progress Card */}
               <div style={{ backgroundColor: theme.white, borderRadius: '16px', padding: '24px', boxShadow: theme.shadowSoft, border: `1px solid ${theme.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', paddingBottom: '16px', borderBottom: `2px solid #F0F0F0` }}>
                   <i className="bi bi-graph-up" style={{ color: theme.success, fontSize: '18px' }}></i>
@@ -484,7 +443,6 @@ const LessonPage = () => {
                 </div>
               </div>
 
-              {/* SIDEBAR LIST (Daftar Materi) */}
               <div className="custom-scrollbar" style={{ 
                   backgroundColor: theme.white, borderRadius: '16px', overflow: 'hidden', 
                   boxShadow: theme.shadowSoft, border: `1px solid ${theme.border}`, 
@@ -494,10 +452,8 @@ const LessonPage = () => {
                      <h5 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: theme.textMain }}>Daftar Materi</h5>
                   </div>
                   
-                  {/* LOOPING MODULES & LESSONS */}
                   {modules.map((mod, idx) => (
                       <div key={mod.id}>
-                          {/* Judul Modul */}
                           <div style={{ 
                               padding: '12px 20px', backgroundColor: '#F9FAFB', 
                               borderBottom: '1px solid #EEE', borderTop: idx > 0 ? '1px solid #EEE' : 'none',
@@ -506,7 +462,6 @@ const LessonPage = () => {
                               Modul {idx + 1}: {mod.title}
                           </div>
 
-                          {/* Daftar Lesson dalam Modul */}
                           {mod.lessons && mod.lessons.map((l) => {
                               const isActive = String(l.id) === String(lesson.id);
                               return (
@@ -537,7 +492,6 @@ const LessonPage = () => {
                               );
                           })}
                           
-                          {/* Fallback jika tidak ada lesson */}
                           {(!mod.lessons || mod.lessons.length === 0) && (
                               <div style={{ padding: '15px 20px', color: theme.textMuted, fontSize: '12px', fontStyle: 'italic', textAlign: 'center' }}>
                                   Belum ada materi

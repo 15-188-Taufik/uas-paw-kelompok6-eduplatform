@@ -19,7 +19,6 @@ const ManageCoursePage = () => {
   const [assignmentFile, setAssignmentFile] = useState(null);
   const [lessonFile, setLessonFile] = useState(null);
 
-  // --- THEME ---
   const theme = {
     primary: '#FF7E3E',
     primaryLight: '#FFF5F1',
@@ -34,16 +33,17 @@ const ManageCoursePage = () => {
 
   const fetchCourseData = async () => {
     try {
-      const courseRes = await api.get(`/courses/${id}`);
+      // [PERBAIKAN] Tambah /api
+      const courseRes = await api.get(`/api/courses/${id}`);
       setCourse(courseRes.data.course);
 
-      const modulesRes = await api.get(`/courses/${id}/modules`);
+      const modulesRes = await api.get(`/api/courses/${id}/modules`);
       const modulesData = modulesRes.data.modules;
 
       const modulesWithContent = await Promise.all(modulesData.map(async (mod) => {
         const [lessonsRes, assignsRes] = await Promise.all([
-            api.get(`/modules/${mod.id}/lessons`),
-            api.get(`/modules/${mod.id}/assignments`)
+            api.get(`/api/modules/${mod.id}/lessons`),
+            api.get(`/api/modules/${mod.id}/assignments`)
         ]);
 
         return { 
@@ -61,7 +61,6 @@ const ManageCoursePage = () => {
     }
   };
 
-  // --- SELECTION LOGIC ---
   const selectLesson = (lesson) => {
       setSelectedLesson(lesson);
       setSelectedAssignment(null);
@@ -76,12 +75,12 @@ const ManageCoursePage = () => {
       setLessonFile(null);
   };
 
-  // --- HANDLERS (With SweetAlert) ---
   const handleAddModule = async (e) => {
     e.preventDefault();
     if (!newModuleTitle.trim()) return;
     try {
-      await api.post(`/courses/${id}/modules`, { title: newModuleTitle, sort_order: modules.length });
+      // [PERBAIKAN] Tambah /api
+      await api.post(`/api/courses/${id}/modules`, { title: newModuleTitle, sort_order: modules.length });
       setNewModuleTitle('');
       fetchCourseData();
       const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
@@ -102,7 +101,8 @@ const ManageCoursePage = () => {
 
     if (title) {
         try {
-            await api.post(`/modules/${moduleId}/lessons`, { title: title, content_text: '', video_url: '', sort_order: 0 });
+            // [PERBAIKAN] Tambah /api
+            await api.post(`/api/modules/${moduleId}/lessons`, { title: title, content_text: '', video_url: '', sort_order: 0 });
             fetchCourseData();
         } catch (err) {
             Swal.fire('Error', 'Gagal membuat pelajaran', 'error');
@@ -120,7 +120,8 @@ const ManageCoursePage = () => {
       formData.append('is_preview', selectedLesson.is_preview);
       if (lessonFile) formData.append('file_material', lessonFile);
 
-      await api.put(`/lessons/${selectedLesson.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      // [PERBAIKAN] Tambah /api
+      await api.put(`/api/lessons/${selectedLesson.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
       Swal.fire({ title: 'Tersimpan!', icon: 'success', timer: 1500, showConfirmButton: false });
       setLessonFile(null);
@@ -140,7 +141,8 @@ const ManageCoursePage = () => {
     });
     if (res.isConfirmed) {
         try {
-            await api.delete(`/lessons/${lessonId}`);
+            // [PERBAIKAN] Tambah /api
+            await api.delete(`/api/lessons/${lessonId}`);
             setSelectedLesson(null);
             fetchCourseData();
             Swal.fire({ title: 'Terhapus', icon: 'success', timer: 1000, showConfirmButton: false });
@@ -161,7 +163,8 @@ const ManageCoursePage = () => {
     
     if (title) {
         try {
-            await api.post(`/modules/${moduleId}/assignments`, { title: title, description: '', due_date: null });
+            // [PERBAIKAN] Tambah /api
+            await api.post(`/api/modules/${moduleId}/assignments`, { title: title, description: '', due_date: null });
             fetchCourseData();
         } catch (err) {
             Swal.fire('Error', 'Gagal membuat tugas', 'error');
@@ -179,7 +182,8 @@ const ManageCoursePage = () => {
           if (selectedAssignment.due_date) formData.append('due_date', selectedAssignment.due_date);
           if (assignmentFile) formData.append('attachment_file', assignmentFile);
 
-          await api.post(`/assignments/${selectedAssignment.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+          // [PERBAIKAN] Tambah /api
+          await api.post(`/api/assignments/${selectedAssignment.id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
           
           Swal.fire({ title: 'Tugas Diupdate!', icon: 'success', timer: 1500, showConfirmButton: false });
           setAssignmentFile(null);
@@ -199,7 +203,8 @@ const ManageCoursePage = () => {
       });
       if(res.isConfirmed) {
           try {
-              await api.delete(`/assignments/${assignId}`);
+              // [PERBAIKAN] Tambah /api
+              await api.delete(`/api/assignments/${assignId}`);
               setSelectedAssignment(null);
               fetchCourseData();
               Swal.fire({ title: 'Terhapus', icon: 'success', timer: 1000, showConfirmButton: false });
@@ -219,7 +224,6 @@ const ManageCoursePage = () => {
   return (
     <div className="d-flex flex-column vh-100" style={{ backgroundColor: theme.bg, fontFamily: "'Poppins', sans-serif" }}>
       
-      {/* HEADER */}
       <div className="bg-white border-bottom px-4 py-3 d-flex justify-content-between align-items-center shadow-sm sticky-top" style={{ zIndex: 10 }}>
         <div className="d-flex align-items-center gap-3">
           <button onClick={() => navigate('/instructor-dashboard')} className="btn btn-light btn-sm rounded-circle border">
@@ -242,7 +246,6 @@ const ManageCoursePage = () => {
       <div className="flex-grow-1 overflow-hidden">
         <div className="row h-100 g-0">
           
-          {/* --- SIDEBAR --- */}
           <div className="col-md-4 col-lg-3 bg-white border-end h-100 overflow-auto">
             <div className="p-3">
               <h6 className="fw-bold text-uppercase small mb-3 ls-1" style={{color: theme.primary}}>Daftar Modul</h6>
@@ -265,7 +268,6 @@ const ManageCoursePage = () => {
                       <div className="accordion-body p-0">
                         <div className="list-group list-group-flush">
                           
-                          {/* LESSONS */}
                           {mod.lessons.map((lesson) => {
                             const isActive = selectedLesson?.id === lesson.id;
                             return (
@@ -286,7 +288,6 @@ const ManageCoursePage = () => {
                             );
                           })}
 
-                          {/* ASSIGNMENTS */}
                           {mod.assignments && mod.assignments.map((assign) => {
                              const isActive = selectedAssignment?.id === assign.id;
                              return (
@@ -307,7 +308,6 @@ const ManageCoursePage = () => {
                              );
                           })}
                           
-                          {/* BUTTONS ADD */}
                           <div className="d-flex border-top">
                               <button onClick={() => handleAddLesson(mod.id)} className="btn btn-link text-decoration-none small fw-bold flex-fill py-2" style={{color: theme.primary}}>
                                 + Materi
@@ -325,7 +325,6 @@ const ManageCoursePage = () => {
                 ))}
               </div>
 
-              {/* Form Add Module */}
               <form onSubmit={handleAddModule} className="mt-4">
                 <div className="input-group input-group-sm shadow-sm rounded">
                   <input 
@@ -343,10 +342,8 @@ const ManageCoursePage = () => {
             </div>
           </div>
 
-          {/* --- EDITOR AREA --- */}
           <div className="col-md-8 col-lg-9 h-100 overflow-auto">
             
-            {/* 1. EDITOR PELAJARAN (LESSON) */}
             {selectedLesson && (
               <div className="p-4 p-lg-5 mx-auto fade-in-up" style={{ maxWidth: '900px' }}>
                 <div className="d-flex justify-content-between align-items-center mb-4">
@@ -359,7 +356,6 @@ const ManageCoursePage = () => {
                 <div className="card border-0 shadow-lg rounded-4 overflow-hidden">
                     <div className="card-body p-4 p-lg-5 bg-white">
                         <form onSubmit={handleUpdateLesson}>
-                            {/* Judul */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Judul Materi</label>
                                 <input type="text" className="form-control form-control-lg fw-bold border-0 rounded-3 px-3" 
@@ -369,7 +365,6 @@ const ManageCoursePage = () => {
                                 />
                             </div>
 
-                            {/* UPLOAD FILE */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Upload Video / PDF / Gambar</label>
                                 <input 
@@ -383,7 +378,6 @@ const ManageCoursePage = () => {
                                 </div>
                             </div>
 
-                            {/* Video URL */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Atau Masukkan Link URL (Youtube/External)</label>
                                 <input type="text" className="form-control border-0 rounded-3 px-3" placeholder="https://youtube.com/..."
@@ -393,14 +387,12 @@ const ManageCoursePage = () => {
                                 />
                             </div>
 
-                            {/* Preview */}
                             {selectedLesson.video_url && (
                                 <div className="ratio ratio-16x9 mb-4 rounded-3 overflow-hidden bg-dark">
                                     <iframe src={selectedLesson.video_url.replace('watch?v=', 'embed/')} title="Preview"></iframe>
                                 </div>
                             )}
 
-                            {/* Deskripsi */}
                             <div className="mb-4">
                                 <label className="text-uppercase text-muted fw-bold small mb-1">Isi Materi / Deskripsi</label>
                                 <textarea className="form-control border-0 rounded-3 px-3 py-3" rows="10"
@@ -425,7 +417,6 @@ const ManageCoursePage = () => {
               </div>
             )}
 
-            {/* 2. EDITOR TUGAS (ASSIGNMENT) */}
             {selectedAssignment && (
               <div className="p-4 p-lg-5 mx-auto fade-in-up" style={{ maxWidth: '900px' }}>
                  <div className="d-flex justify-content-between align-items-center mb-4">
@@ -504,7 +495,6 @@ const ManageCoursePage = () => {
               </div>
             )}
 
-            {/* 3. EMPTY STATE */}
             {!selectedLesson && !selectedAssignment && (
                <div className="h-100 d-flex flex-column justify-content-center align-items-center text-muted p-5">
                 <div className="p-4 rounded-circle shadow-sm mb-3" style={{backgroundColor: 'white'}}>

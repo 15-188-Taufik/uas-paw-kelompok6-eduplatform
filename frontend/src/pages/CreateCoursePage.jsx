@@ -8,9 +8,9 @@ const CreateCoursePage = () => {
     title: '',
     description: '',
     category: '',
-    enrollment_key: '' // [BARU]
+    enrollment_key: '' 
   });
-  const [thumbnailFile, setThumbnailFile] = useState(null); // [BARU] State file
+  const [thumbnailFile, setThumbnailFile] = useState(null); 
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -36,28 +36,25 @@ const CreateCoursePage = () => {
     setIsSubmitting(true);
     
     try {
-      // Gunakan FormData karena ada file upload
       const data = new FormData();
       data.append('title', formData.title);
       data.append('description', formData.description);
       data.append('category', formData.category);
       data.append('instructor_id', user.id);
       
-      // Tambahkan key (opsional)
       if (formData.enrollment_key) {
           data.append('enrollment_key', formData.enrollment_key);
       }
       
-      // Tambahkan file gambar
       if (thumbnailFile) {
           data.append('thumbnail_file', thumbnailFile);
       }
 
-      await api.post('/courses', data, {
+      // [PERBAIKAN] Tambah /api
+      await api.post('/api/courses', data, {
           headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      // SweetAlert: Toast Notification Success
       const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -119,7 +116,7 @@ const CreateCoursePage = () => {
           <input 
             type="file" 
             onChange={handleFileChange}
-            accept="image/*" // Hanya terima gambar
+            accept="image/*" 
             style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', background: '#f9f9f9' }}
           />
           {thumbnailFile && <p style={{color:'green', fontSize:'0.9rem', margin:'5px 0 0'}}>✓ {thumbnailFile.name}</p>}

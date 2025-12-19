@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import Swal from 'sweetalert2'; // Pastikan install: npm install sweetalert2
+import Swal from 'sweetalert2'; 
 
 const CourseDetailPage = () => {
   const { id } = useParams(); 
@@ -18,7 +18,6 @@ const CourseDetailPage = () => {
 
   const user = JSON.parse(localStorage.getItem('user'));
 
-  // --- ENHANCED THEME ---
   const theme = {
     primary: '#FF7E3E',
     primaryLight: '#FFF5F1',
@@ -40,15 +39,18 @@ const CourseDetailPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const courseRes = await api.get(`/courses/${id}`);
+        // [PERBAIKAN] Tambah /api
+        const courseRes = await api.get(`/api/courses/${id}`);
         setCourse(courseRes.data.course);
 
-        const modulesRes = await api.get(`/courses/${id}/modules`);
+        // [PERBAIKAN] Tambah /api
+        const modulesRes = await api.get(`/api/courses/${id}/modules`);
         const detailedModules = await Promise.all(
           modulesRes.data.modules.map(async (mod) => {
              try {
-               const lessons = await api.get(`/modules/${mod.id}/lessons`);
-               const assigns = await api.get(`/modules/${mod.id}/assignments`);
+               // [PERBAIKAN] Tambah /api
+               const lessons = await api.get(`/api/modules/${mod.id}/lessons`);
+               const assigns = await api.get(`/api/modules/${mod.id}/assignments`);
                return { ...mod, lessons: lessons.data.lessons, assignments: assigns.data.assignments || [] };
              } catch (err) {
                return { ...mod, lessons: [], assignments: [] };
@@ -60,9 +62,8 @@ const CourseDetailPage = () => {
 
         if (user) {
             try {
+                // [PERBAIKAN] Tambah /api
                 const myCourses = await api.get(`/api/students/${user.id}/courses`);
-                // Cek apakah course ID ini ada di daftar kursus saya
-                // Pastikan tipe data sama (string/number) dengan ==
                 if (myCourses.data.courses.some(c => c.id == id)) setEnrollStatus('success');
             } catch (err) {}
         }
@@ -85,7 +86,8 @@ const CourseDetailPage = () => {
     }
 
     try {
-      await api.post('/enroll', {
+      // [PERBAIKAN] Tambah /api
+      await api.post('/api/enroll', {
         student_id: user.id,
         course_id: id,
         enrollment_key: enrollKey 
@@ -99,7 +101,6 @@ const CourseDetailPage = () => {
     }
   };
 
-  // --- LOGIKA UNENROLL ---
   const handleUnenroll = async () => {
     if (!user) return;
 
@@ -116,12 +117,13 @@ const CourseDetailPage = () => {
 
     if (result.isConfirmed) {
       try {
-        await api.post('/unenroll', {
+        // [PERBAIKAN] Tambah /api
+        await api.post('/api/unenroll', {
           user_id: user.id,
           course_id: id
         });
         
-        setEnrollStatus(null); // Reset status enrollment
+        setEnrollStatus(null); 
         Swal.fire(
           'Berhasil Keluar',
           'Anda telah membatalkan pendaftaran kursus ini.',
@@ -216,7 +218,6 @@ const CourseDetailPage = () => {
   return (
     <div style={{ backgroundColor: theme.bg, minHeight: '100vh', fontFamily: "'Poppins', sans-serif", margin: 0, padding: 0 }}>
       
-      {/* Gradient Background */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -257,7 +258,6 @@ const CourseDetailPage = () => {
 
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px 0 24px', position: 'relative', zIndex: 1 }}>
           
-          {/* Back Button & Status */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
             <button 
               onClick={() => navigate('/')} 
@@ -306,7 +306,6 @@ const CourseDetailPage = () => {
             )}
           </div>
 
-          {/* Title & Description */}
           <div style={{ marginBottom: '30px' }}>
             <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{
@@ -345,7 +344,6 @@ const CourseDetailPage = () => {
             </h1>
           </div>
 
-          {/* Course Stats */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '30px', flexWrap: 'wrap', marginTop: '30px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className="bi bi-star-fill" style={{ fontSize: '18px' }}></i>
@@ -368,13 +366,10 @@ const CourseDetailPage = () => {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '50px 24px', display: 'grid', gridTemplateColumns: '1fr 380px', gap: '50px', alignItems: 'start' }}>
         
-        {/* LEFT COLUMN - CONTENT */}
         <div>
           
-          {/* TAB NAVIGATION */}
           <div style={{
             display: 'flex',
             gap: '0',
@@ -426,10 +421,8 @@ const CourseDetailPage = () => {
             ))}
           </div>
 
-          {/* TAB CONTENT */}
           <div className="tab-content">
             
-            {/* OVERVIEW TAB */}
             {activeTab === 'overview' && (
               <div style={{ backgroundColor: theme.white, borderRadius: '0 16px 16px 16px', padding: '40px', boxShadow: `0 4px 12px rgba(0,0,0,0.02)` }}>
                 <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '20px', color: theme.textMain, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -468,7 +461,6 @@ const CourseDetailPage = () => {
               </div>
             )}
 
-            {/* CURRICULUM TAB */}
             {activeTab === 'curriculum' && (
               <div style={{ backgroundColor: theme.white, borderRadius: '0 16px 16px 16px', overflow: 'hidden', boxShadow: `0 4px 12px rgba(0,0,0,0.02)` }}>
                 <h3 style={{ fontSize: '24px', fontWeight: '700', padding: '40px 40px 20px', color: theme.textMain, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -545,7 +537,6 @@ const CourseDetailPage = () => {
                             }}></i>
                           </div>
 
-                          {/* Module Content */}
                           {openModuleId === modul.id && (
                             <div style={{ backgroundColor: '#FAFAFA', borderTop: `1px solid ${theme.border}` }}>
                               {modul.lessons.length > 0 && (
@@ -633,7 +624,6 @@ const CourseDetailPage = () => {
               </div>
             )}
 
-            {/* REVIEWS TAB */}
             {activeTab === 'reviews' && (
               <div style={{ backgroundColor: theme.white, borderRadius: '0 16px 16px 16px', padding: '40px', boxShadow: `0 4px 12px rgba(0,0,0,0.02)` }}>
                 <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '30px', color: theme.textMain, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -680,7 +670,6 @@ const CourseDetailPage = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN - STICKY SIDEBAR */}
         <div>
           <div style={{
             position: 'sticky',
@@ -692,7 +681,6 @@ const CourseDetailPage = () => {
             border: `1px solid ${theme.border}`
           }}>
             
-            {/* Image */}
             <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
               <img 
                 src={course.thumbnail_url || 'https://via.placeholder.com/400x300'} 
@@ -717,7 +705,6 @@ const CourseDetailPage = () => {
               }}></div>
             </div>
 
-            {/* Content */}
             <div style={{ padding: '32px 28px' }}>
               
               {checkAccess() ? (
@@ -763,7 +750,6 @@ const CourseDetailPage = () => {
                       <i className="bi bi-play-circle-fill"></i> Lanjut Belajar
                   </button>
 
-                  {/* TOMBOL UNENROLL */}
                   <button 
                       onClick={handleUnenroll}
                       style={{
@@ -895,7 +881,6 @@ const CourseDetailPage = () => {
                 </div>
               )}
 
-              {/* Features */}
               <div style={{ marginTop: '32px', borderTop: `2px solid ${theme.border}`, paddingTop: '24px' }}>
                   <h5 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '16px', color: theme.textMain, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <i className="bi bi-star-fill" style={{ color: theme.primary }}></i>

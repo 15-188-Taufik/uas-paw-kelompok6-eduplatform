@@ -23,13 +23,14 @@ const RegisterPage = () => {
     e.preventDefault();
     setError('');
     try {
-      const response = await api.post('/register', formData);
-      if (response.data.success) {
+      // [PERBAIKAN] Tambah /api
+      const response = await api.post('/api/register', formData);
+      if (response.data.success || response.data.status === 'success') {
         alert('Registrasi Berhasil! Silakan Login.');
         navigate('/login');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Registrasi Gagal! Silakan coba lagi.');
+      setError(err.response?.data?.message || 'Registrasi Gagal! Silakan coba lagi.');
     }
   };
 
@@ -62,9 +63,7 @@ const RegisterPage = () => {
         border: `1px solid ${colors.border}`
       }}>
         
-        {/* Header Logo & Title */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          {/* BAGIAN ICON YANG DIPERBARUI MENJADI LOGO */}
           <div style={{ marginBottom: '16px' }}>
             <img 
               src="/Logoedu.png" 
@@ -159,7 +158,7 @@ const RegisterPage = () => {
               borderRadius: '14px', 
               fontSize: '16px', 
               fontWeight: '700', 
-              cursor: 'pointer',
+              cursor: 'pointer', 
               marginTop: '10px',
               transition: 'all 0.2s ease',
               boxShadow: `0 4px 14px rgba(255, 126, 62, 0.3)`
