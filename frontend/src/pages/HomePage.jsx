@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // Tambah useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/axios';
 
 const HomePage = () => {
@@ -10,9 +10,8 @@ const HomePage = () => {
   const [selectedCategory, setSelectedCategory] = useState('semua');
   
   const navigate = useNavigate();
-  const location = useLocation(); // Hook untuk baca URL
+  const location = useLocation(); 
 
-  // 1. Ambil Keyword Pencarian dari URL
   const queryParams = new URLSearchParams(location.search);
   const searchQuery = queryParams.get('search');
 
@@ -20,15 +19,14 @@ const HomePage = () => {
     const fetchCourses = async () => {
       setLoading(true);
       try {
-        // 2. Logika Fetch: Pakai search jika ada, jika tidak ambil semua
+        // [PERBAIKAN] Tambahkan /api di depan URL
         const endpoint = searchQuery 
-          ? `/courses?search=${encodeURIComponent(searchQuery)}` 
-          : '/courses';
+          ? `/api/courses?search=${encodeURIComponent(searchQuery)}` 
+          : '/api/courses';
           
         const response = await api.get(endpoint);
         setCourses(response.data.courses); 
         
-        // Reset kategori ke 'semua' saat melakukan pencarian baru
         if (searchQuery) setSelectedCategory('semua');
         
       } catch (err) {
@@ -40,7 +38,7 @@ const HomePage = () => {
     };
 
     fetchCourses();
-  }, [searchQuery]); // Re-fetch saat keyword berubah
+  }, [searchQuery]); 
 
   // Theme Configuration
   const colors = {
@@ -56,16 +54,13 @@ const HomePage = () => {
     cardShadowHeavy: '0 20px 40px rgba(0,0,0,0.1)'
   };
 
-  // Get unique categories (hanya dari hasil fetch)
   const categories = ['semua', ...new Set(courses.map(c => c.category || 'Umum'))];
 
-  // Filter courses (Client side filtering untuk kategori)
   const filteredCourses = courses.filter(course => {
     const matchCategory = selectedCategory === 'semua' || course.category === selectedCategory;
     return matchCategory;
   });
 
-  // Featured course (first one) - HANYA TAMPIL JIKA TIDAK SEDANG MENCARI
   const featuredCourse = !searchQuery && courses.length > 0 ? courses[0] : null;
 
   if (loading) return (
@@ -97,7 +92,6 @@ const HomePage = () => {
       overflow: 'hidden'
     }}>
       
-      {/* Gradient Background */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -111,10 +105,8 @@ const HomePage = () => {
 
       <div style={{ maxWidth: '1300px', margin: '0 auto', padding: '40px 20px' }}>
         
-        {/* HEADER */}
         <div style={{ marginBottom: '40px', textAlign: 'center' }}>
           
-          {/* Judul Berubah Tergantung Mode Search */}
           {searchQuery ? (
             <div style={{ textAlign: 'left', marginBottom: '20px' }}>
                 <button 
@@ -151,11 +143,10 @@ const HomePage = () => {
             </>
           )}
 
-          {/* Category Filter (Tetap tampil untuk filter hasil search juga) */}
           <div style={{
             display: 'flex',
             gap: '12px',
-            justifyContent: searchQuery ? 'flex-start' : 'center', // Align kiri kalau search
+            justifyContent: searchQuery ? 'flex-start' : 'center',
             flexWrap: 'wrap',
             marginBottom: '20px'
           }}>
@@ -194,7 +185,6 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* Featured Course - HANYA TAMPIL JIKA TIDAK SEARCH */}
         {!searchQuery && featuredCourse && filteredCourses.includes(featuredCourse) && (
           <div style={{
             marginBottom: '50px',
@@ -212,7 +202,6 @@ const HomePage = () => {
             }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
-              {/* Image */}
               <div style={{
                 height: '300px',
                 overflow: 'hidden',
@@ -237,7 +226,6 @@ const HomePage = () => {
                 }}></div>
               </div>
 
-              {/* Content */}
               <div style={{
                 padding: '40px',
                 display: 'flex',
@@ -301,7 +289,6 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* Course Grid */}
         {filteredCourses.length === 0 ? (
           <div style={{ 
             textAlign: 'center', 
@@ -364,7 +351,6 @@ const HomePage = () => {
                 onClick={() => navigate(`/course/${course.id}`)}
               >
                 
-                {/* Image Container */}
                 <div style={{ 
                   borderRadius: '16px', 
                   overflow: 'hidden', 
@@ -383,7 +369,6 @@ const HomePage = () => {
                       transform: hoveredCard === course.id ? 'scale(1.05)' : 'scale(1)'
                     }}
                   />
-                  {/* Category Tag */}
                   <span style={{ 
                     position: 'absolute',
                     top: '12px',
@@ -400,7 +385,6 @@ const HomePage = () => {
                   </span>
                 </div>
                 
-                {/* Content */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <h3 style={{ 
                     margin: '0 0 8px 0', 
@@ -426,7 +410,6 @@ const HomePage = () => {
                     {course.description || 'Kursus menarik untuk meningkatkan skill Anda'}
                   </p>
                   
-                  {/* Footer */}
                   <div style={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 

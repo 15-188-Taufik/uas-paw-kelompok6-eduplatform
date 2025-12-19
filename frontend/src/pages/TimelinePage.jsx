@@ -7,7 +7,6 @@ const TimelinePage = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Tema Warna
   const colors = {
     primary: '#FF7E3E',
     background: '#FDF8F4',
@@ -31,13 +30,12 @@ const TimelinePage = () => {
 
     const fetchTimeline = async () => {
       try {
-        // Fetch courses untuk student
-        const response = await api.get(`/students/${user.id}/courses`);
+        // [PERBAIKAN] Tambahkan /api di depan URL
+        const response = await api.get(`/api/students/${user.id}/courses`);
         const courses = response.data.courses;
 
-        // Filter dan urutkan berdasarkan deadline terdekat
         const timelineData = courses
-          .filter(course => course.deadline) // Hanya courses dengan deadline
+          .filter(course => course.deadline)
           .map(course => {
             const deadlineDate = new Date(course.deadline);
             const today = new Date();
@@ -121,7 +119,6 @@ const TimelinePage = () => {
     }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
         
-        {/* Header Section */}
         <div style={{ marginBottom: '40px' }}>
           <h2 style={{ 
             fontSize: '28px', 
@@ -187,7 +184,7 @@ const TimelinePage = () => {
                   }}
                   onClick={() => navigate(`/course/${item.id}`)}
                 >
-                  {/* Timeline Indicator (Left) */}
+                  {/* Timeline Indicator */}
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{
                       width: '12px',
@@ -207,7 +204,7 @@ const TimelinePage = () => {
                     )}
                   </div>
 
-                  {/* Content (Middle) */}
+                  {/* Content */}
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                       <h4 style={{ 
@@ -269,7 +266,7 @@ const TimelinePage = () => {
                     </div>
                   </div>
 
-                  {/* Days Left (Right) */}
+                  {/* Days Left */}
                   <div style={{ textAlign: 'center', minWidth: '80px' }}>
                     <div style={{
                       fontSize: '24px',

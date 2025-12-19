@@ -8,10 +8,8 @@ const MyCoursesPage = () => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const navigate = useNavigate();
 
-  // 1. Ambil data user yang sedang login
   const user = JSON.parse(localStorage.getItem('user'));
 
-  // Tema Warna Focotech
   const colors = {
     primary: '#FF7E3E',
     background: '#FDF8F4',
@@ -20,12 +18,11 @@ const MyCoursesPage = () => {
     textLight: '#7A7A7A',
     border: '#EAEAEA',
     cardShadow: '0 10px 30px rgba(0,0,0,0.04)',
-    dangerBg: '#FEF2F2', // Warna background merah lembut untuk tombol hapus
-    dangerText: '#EF4444' // Warna teks merah
+    dangerBg: '#FEF2F2', 
+    dangerText: '#EF4444' 
   };
 
   useEffect(() => {
-    // Jika tidak ada user login, tendang ke halaman login
     if (!user) {
         navigate('/login');
         return;
@@ -33,7 +30,8 @@ const MyCoursesPage = () => {
 
     const fetchMyCourses = async () => {
       try {
-        const response = await api.get(`/students/${user.id}/courses`);
+        // [PERBAIKAN] Tambahkan /api di depan
+        const response = await api.get(`/api/students/${user.id}/courses`);
         setCourses(response.data.courses);
       } catch (err) {
         console.error("Gagal mengambil kursus:", err);
@@ -47,26 +45,25 @@ const MyCoursesPage = () => {
 
   // --- FUNGSI UNENROLL ---
   const handleUnenroll = async (courseId, courseTitle, e) => {
-    e.stopPropagation(); // Mencegah klik tembus ke card (navigate)
+    e.stopPropagation(); 
     
     if (!window.confirm(`Apakah Anda yakin ingin keluar dari kursus "${courseTitle}"? Progress belajar Anda akan hilang permanen.`)) {
         return;
     }
 
     try {
-        await api.post('/unenroll', {
+        // [PERBAIKAN] Tambahkan /api di depan
+        await api.post('/api/unenroll', {
             student_id: user.id,
             course_id: courseId
         });
         
         alert("Berhasil keluar dari kursus.");
-        
-        // Update UI: Hapus kursus dari state tanpa reload page
         setCourses(prevCourses => prevCourses.filter(c => c.id !== courseId));
         
     } catch (err) {
         console.error(err);
-        alert("Gagal melakukan unenroll. Pastikan Backend sudah memiliki route /api/unenroll");
+        alert("Gagal melakukan unenroll.");
     }
   };
 
@@ -87,7 +84,6 @@ const MyCoursesPage = () => {
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
-        {/* Header Section */}
         <div style={{ marginBottom: '40px' }}>
           <h2 style={{ 
             fontSize: '28px', 
@@ -157,7 +153,7 @@ const MyCoursesPage = () => {
                 key={course.id} 
                 onMouseEnter={() => setHoveredCard(course.id)}
                 onMouseLeave={() => setHoveredCard(null)}
-                onClick={() => navigate(`/course/${course.id}`)} // Klik card untuk navigate
+                onClick={() => navigate(`/course/${course.id}`)} 
                 style={{ 
                   backgroundColor: colors.white,
                   borderRadius: '24px', 
@@ -174,7 +170,6 @@ const MyCoursesPage = () => {
                 }}
               >
                 
-                {/* Image Container with Rounded Corners */}
                 <div style={{ 
                   borderRadius: '16px', 
                   overflow: 'hidden', 
@@ -191,7 +186,6 @@ const MyCoursesPage = () => {
                       objectFit: 'cover'
                     }}
                   />
-                  {/* Category Tag Overlay */}
                   <span style={{ 
                     position: 'absolute',
                     top: '12px',
@@ -209,7 +203,6 @@ const MyCoursesPage = () => {
                   </span>
                 </div>
                 
-                {/* Content */}
                 <div style={{ padding: '0 5px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <h3 style={{ 
                     margin: '0 0 10px 0', 
@@ -231,7 +224,6 @@ const MyCoursesPage = () => {
                     <i className="bi bi-person-circle me-1"></i> {course.instructor_name || 'Instruktur'}
                   </p>
 
-                  {/* Progress Bar Section */}
                   <div style={{ marginBottom: '20px', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <small style={{ color: colors.textLight, fontWeight: '600', fontFamily: 'Poppins' }}>Progress</small>
@@ -252,7 +244,6 @@ const MyCoursesPage = () => {
                     </div>
                   </div>
 
-                  {/* Footer Card: Buttons */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
                     
                     <div style={{ display: 'flex', gap: '10px' }}>
@@ -284,7 +275,6 @@ const MyCoursesPage = () => {
                           Lanjutkan
                         </button>
 
-                        {/* TOMBOL UNENROLL (BARU) */}
                         <button 
                           onClick={(e) => handleUnenroll(course.id, course.title, e)}
                           title="Batal Daftar / Keluar Kursus"
@@ -315,7 +305,6 @@ const MyCoursesPage = () => {
                         </button>
                     </div>
                     
-                    {/* Arrow Icon Circle */}
                     <div style={{ 
                       width: '32px', 
                       height: '32px', 
