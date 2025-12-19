@@ -42,7 +42,7 @@ const StudentDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await api.get(`/students/${user.id}/courses`);
+        const response = await api.get(`/api/students/${user.id}/courses`);
         setCourses(response.data?.courses || []);
       } catch (err) {
         console.error(err);

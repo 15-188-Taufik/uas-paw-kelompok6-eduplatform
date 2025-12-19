@@ -27,7 +27,7 @@ const InstructorDashboard = () => {
 
     const fetchMyTeachingCourses = async () => {
       try {
-        const response = await api.get(`/instructors/${user.id}/courses`);
+        const response = await api.get(`/api/instructors/${user.id}/courses`);
         setCourses(response.data.courses); 
       } catch (err) {
         console.error("Gagal mengambil data instruktur:", err);
