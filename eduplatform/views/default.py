@@ -4,23 +4,29 @@ import shutil
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-import cloudinary.utils # [PENTING] Tambahkan ini untuk generate signed url
+import cloudinary.utils # Untuk generate signed url
 import datetime
 import traceback
 import requests
-import urllib.parse # [PENTING] Untuk parsing URL
+import urllib.parse # Untuk parsing URL
+import json
+import logging
+import bcrypt # Library standard untuk hashing
 
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest, HTTPUnauthorized, HTTPNotFound, HTTPForbidden, HTTPInternalServerError
 from pyramid.response import Response
-from passlib.hash import bcrypt
 from sqlalchemy.exc import DBAPIError
+from sqlalchemy import func
 
-# Import semua model
+# Import semua model dari folder models
+# Pastikan struktur folder Anda sesuai, biasanya '..' mengacu ke folder parent (myproject)
 from ..models import (
     User, Course, Module, Lesson, 
     Assignment, Submission, Enrollment, LessonCompletion
 )
+
+log = logging.getLogger(__name__)
 
 # [KONFIGURASI CLOUDINARY]
 cloudinary.config( 
@@ -31,12 +37,35 @@ cloudinary.config(
 )
 
 # ==========================================
-# 1. CORS OPTIONS HANDLER
+# 0. SECURITY HELPERS (HASHING)
 # ==========================================
+
+def hash_password(pw):
+    """Mengubah password text biasa menjadi hash bcrypt"""
+    pwhash = bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt())
+    return pwhash.decode('utf-8')
+
+def check_password(pw, hashed_pw):
+    """Mencocokkan password inputan dengan hash di database"""
+    if isinstance(hashed_pw, str):
+        hashed_pw = hashed_pw.encode('utf-8')
+    return bcrypt.checkpw(pw.encode('utf-8'), hashed_pw)
+
+# ==========================================
+# 1. CORS OPTIONS HANDLER & HOME
+# ==========================================
+
+@view_config(route_name='home', renderer='json')
+def home_view(request):
+    """Cek status server"""
+    return {
+        'status': 'success', 
+        'message': 'Backend API Learning Management System is Running'
+    }
+
+# Menangani Pre-flight Request (OPTIONS) agar tidak error CORS di browser
 @view_config(route_name='register', request_method='OPTIONS')
 @view_config(route_name='login', request_method='OPTIONS')
-@view_config(route_name='api_login', request_method='OPTIONS')
-@view_config(route_name='api_register', request_method='OPTIONS')
 @view_config(route_name='courses', request_method='OPTIONS')
 @view_config(route_name='course_detail', request_method='OPTIONS') 
 @view_config(route_name='modules', request_method='OPTIONS')
@@ -50,12 +79,89 @@ cloudinary.config(
 @view_config(route_name='complete_lesson', request_method='OPTIONS')
 @view_config(route_name='api_grade_submission', request_method='OPTIONS')
 @view_config(route_name='student_timeline', request_method='OPTIONS')
+@view_config(route_name='my_courses', request_method='OPTIONS')
+@view_config(route_name='my_submission', request_method='OPTIONS')
+@view_config(route_name='instructor_courses', request_method='OPTIONS')
 def options_view(request):
     return Response(body='', status=200, content_type='text/plain')
 
 # ==========================================
-# 2. USERS
+# 2. AUTHENTICATION (LOGIN & REGISTER)
 # ==========================================
+
+@view_config(route_name='login', renderer='json', request_method='POST')
+def login_view(request):
+    """Endpoint Login"""
+    try:
+        try:
+            body = request.json_body
+        except json.JSONDecodeError:
+            request.response.status = 400
+            return {'status': 'error', 'message': 'Format JSON tidak valid'}
+
+        email = body.get('email')
+        password = body.get('password')
+
+        if not email or not password:
+            request.response.status = 400
+            return {'status': 'error', 'message': 'Email dan Password wajib diisi'}
+
+        user = request.dbsession.query(User).filter(User.email == email).first()
+
+        if user and check_password(password, user.password):
+            return {
+                'status': 'success',
+                'message': 'Login berhasil',
+                'data': user.to_dict() 
+            }
+        else:
+            request.response.status = 401
+            return {'status': 'error', 'message': 'Email atau Password salah'}
+
+    except Exception as e:
+        log.error(f"Login Error: {e}")
+        request.response.status = 500
+        return {'status': 'error', 'message': 'Internal Server Error'}
+
+@view_config(route_name='register', renderer='json', request_method='POST')
+def register_view(request):
+    """Endpoint Register"""
+    try:
+        body = request.json_body
+        name = body.get('name')
+        email = body.get('email')
+        password = body.get('password')
+        role = body.get('role', 'student')
+
+        if not name or not email or not password:
+            request.response.status = 400
+            return {'status': 'error', 'message': 'Nama, Email, dan Password wajib diisi'}
+
+        existing_user = request.dbsession.query(User).filter(User.email == email).first()
+        if existing_user:
+            request.response.status = 400
+            return {'status': 'error', 'message': 'Email sudah digunakan'}
+
+        new_user = User(
+            name=name,
+            email=email,
+            password=hash_password(password),
+            role=role
+        )
+
+        request.dbsession.add(new_user)
+        request.dbsession.flush()
+
+        return {
+            'status': 'success', 
+            'message': 'Registrasi berhasil',
+            'data': new_user.to_dict()
+        }
+
+    except Exception as e:
+        log.error(f"Register Error: {e}")
+        request.response.status = 500
+        return {'status': 'error', 'message': 'Gagal mendaftar user baru'}
 
 @view_config(route_name='users', renderer='json', request_method='GET')
 def get_users(request):
@@ -68,21 +174,13 @@ def get_users(request):
 
 @view_config(route_name='courses', renderer='json', request_method='GET')
 def get_courses(request):
-    # Ambil parameter pencarian dari URL (misal: /api/courses?search=python)
     search_query = request.params.get('search')
-    
-    # Mulai query dasar
     query = request.dbsession.query(Course)
     
-    # Jika ada pencarian, filter berdasarkan judul (case-insensitive)
     if search_query:
-        # Gunakan ilike agar 'python' cocok dengan 'Python', 'PYTHON', dll.
         query = query.filter(Course.title.ilike(f'%{search_query}%'))
     
-    # Urutkan dari yang terbaru (opsional, tapi bagus untuk UX)
-    # Pastikan model Course punya kolom id atau created_at, default sort by ID desc
     courses = query.order_by(Course.id.desc()).all()
-    
     return {'courses': [c.to_dict() for c in courses]}
 
 @view_config(route_name='course_detail', renderer='json', request_method='GET')
@@ -160,27 +258,23 @@ def create_module(request):
 # ==========================================
 # 5. LESSONS
 # ==========================================
+
 @view_config(route_name='lessons', renderer='json', request_method='GET')
 def get_lessons(request):
     try:
         module_id = request.matchdict['module_id']
-        
-        # Ambil semua lesson berdasarkan module_id, urutkan berdasarkan sort_order
         lessons = request.dbsession.query(Lesson)\
             .filter_by(module_id=module_id)\
             .order_by(Lesson.sort_order)\
             .all()
-            
         return {'lessons': [l.to_dict() for l in lessons]}
-        
     except Exception as e:
         print(f"Error getting lessons: {e}")
-        return {'lessons': []} # Return array kosong agar frontend tidak crash
+        return {'lessons': []}
 
 @view_config(route_name='lesson_detail', renderer='json', request_method='GET')
 def get_lesson_detail(request):
     lesson_id = request.matchdict['id']
-    # Ambil student_id dari query param (?student_id=...)
     student_id = request.params.get('student_id') 
     
     lesson = request.dbsession.query(Lesson).get(lesson_id)
@@ -190,7 +284,7 @@ def get_lesson_detail(request):
     data = lesson.to_dict()
     data['content_text'] = lesson.content_text 
     
-    # [LOGIKA BARU] Cek status completion
+    # Cek status completion
     is_completed = False
     if student_id:
         exists = request.dbsession.query(LessonCompletion).filter_by(
@@ -200,14 +294,12 @@ def get_lesson_detail(request):
         if exists:
             is_completed = True
             
-    data['completed'] = is_completed # Kirim status ke frontend
+    data['completed'] = is_completed
     
-    # Kirim juga info course_id agar frontend bisa load modul/sidebar jika url tidak lengkap
     if lesson.module:
         data['course_id'] = lesson.module.course_id
 
     return {'lesson': data}
-
 
 @view_config(route_name='lessons', renderer='json', request_method='POST')
 def create_lesson(request):
@@ -251,7 +343,6 @@ def create_lesson(request):
         request.dbsession.add(new_lesson)
         request.dbsession.flush()
         return {'success': True, 'lesson': new_lesson.to_dict()}
-        
     except Exception as e:
         print(f"Error creating lesson: {e}")
         return HTTPBadRequest(json_body={'error': f"Failed to create lesson: {str(e)}"})
@@ -587,13 +678,9 @@ def enroll_course(request):
     except Exception as e:
         return HTTPBadRequest(json_body={'error': str(e)})
 
-# --- [BARU] FUNGSI UNENROLL ---
-# --- TAMBAHKAN KODE INI DI BAGIAN BAWAH ---
-
 @view_config(route_name='api_unenroll', renderer='json', request_method='POST')
 def api_unenroll(request):
     try:
-        # 1. Ambil data dari Body Request
         payload = request.json_body
         user_id = payload.get('user_id')
         course_id = payload.get('course_id')
@@ -602,29 +689,18 @@ def api_unenroll(request):
             request.response.status = 400
             return {'status': 'error', 'message': 'User ID dan Course ID wajib ada'}
 
-        # 2. Cari data Enrollment di Database
-        session = request.dbsession
-        enrollment = session.query(Enrollment).filter_by(user_id=user_id, course_id=course_id).first()
+        enrollment = request.dbsession.query(Enrollment).filter_by(student_id=user_id, course_id=course_id).first()
 
-        # 3. Jika ada, Hapus
         if enrollment:
-            session.delete(enrollment)
-            # Transaction otomatis di-commit oleh Pyramid tm
+            request.dbsession.delete(enrollment)
             return {'status': 'success', 'message': 'Berhasil keluar dari kursus'}
         else:
             request.response.status = 404
             return {'status': 'error', 'message': 'Anda belum terdaftar di kursus ini'}
 
-    except DBAPIError:
-        request.response.status = 500
-        return {'status': 'error', 'message': 'Database error'}
     except Exception as e:
         request.response.status = 500
         return {'status': 'error', 'message': str(e)}
-
-# ==========================================
-# GANTI FUNGSI INI DI default.py
-# ==========================================
 
 @view_config(route_name='my_courses', renderer='json', request_method='GET')
 def get_my_courses(request):
@@ -634,24 +710,20 @@ def get_my_courses(request):
         return HTTPNotFound(json_body={'error': 'User not found'})
     
     my_courses_list = []
-    
-    # Ambil waktu sekarang untuk filter deadline yang sudah lewat
     now = datetime.datetime.now()
 
     for enrollment in user.enrollments:
         course = enrollment.course
         course_data = course.to_dict()
 
-        # --- 1. LOGIKA PROGRES (Tetap Sama) ---
+        # Hitung Progress
         total_lessons = request.dbsession.query(Lesson)\
             .join(Module)\
-            .filter(Module.course_id == course.id)\
-            .count()
+            .filter(Module.course_id == course.id).count()
             
         total_assignments = request.dbsession.query(Assignment)\
             .join(Module)\
-            .filter(Module.course_id == course.id)\
-            .count()
+            .filter(Module.course_id == course.id).count()
             
         total_items = total_lessons + total_assignments
 
@@ -669,9 +741,7 @@ def get_my_courses(request):
             .filter(
                 Submission.student_id == student_id,
                 Module.course_id == course.id
-            )\
-            .distinct()\
-            .count()
+            ).distinct().count()
             
         completed_items = completed_lessons + completed_assignments
             
@@ -682,9 +752,7 @@ def get_my_courses(request):
             
         course_data['progress'] = round(progress, 1)
 
-        # --- 2. [BARU] LOGIKA DEADLINE TERDEKAT ---
-        # Mencari assignment di course ini yang due_date-nya > sekarang (belum lewat)
-        # Diurutkan dari yang paling cepat (asc)
+        # Cari Deadline Terdekat
         nearest_assignment = request.dbsession.query(Assignment)\
             .join(Module)\
             .filter(
@@ -696,9 +764,7 @@ def get_my_courses(request):
             .first()
             
         if nearest_assignment:
-            # Kirim dalam format string ISO agar mudah dibaca JS Frontend
             course_data['deadline'] = str(nearest_assignment.due_date)
-            # Opsional: Kirim juga nama tugasnya jika ingin ditampilkan detail
             course_data['next_task_title'] = nearest_assignment.title
         else:
             course_data['deadline'] = None
@@ -707,19 +773,12 @@ def get_my_courses(request):
         
     return {'courses': my_courses_list}
 
-# ==========================================
-# GANTI FUNGSI INI DI default.py
-# ==========================================
-
 @view_config(route_name='student_timeline', renderer='json', request_method='GET')
 def get_student_timeline(request):
     student_id = request.matchdict['id']
-    
-    # Ambil waktu server (naive/tanpa timezone)
     now = datetime.datetime.now() 
     
-    # 1. Ambil SEMUA assignment dari course yang diikuti student
-    #    Menggunakan .all() untuk memastikan tidak hanya satu
+    # Ambil SEMUA assignment dari course yang diikuti student
     assignments = request.dbsession.query(Assignment)\
         .join(Module)\
         .join(Course)\
@@ -729,7 +788,6 @@ def get_student_timeline(request):
         .order_by(Assignment.due_date.asc())\
         .all()
         
-    # 2. Ambil semua submission student ini (untuk cek status submitted)
     submissions = request.dbsession.query(Submission)\
         .filter(Submission.student_id == student_id)\
         .all()
@@ -741,18 +799,13 @@ def get_student_timeline(request):
         is_submitted = assign.id in submitted_ids
         due_date = assign.due_date
         
-        # [PENTING] Normalisasi Timezone untuk mencegah TypeError
-        # Jika due_date punya info timezone, kita hapus agar sama dengan 'now'
         comparison_date = due_date
         if due_date and due_date.tzinfo is not None:
             comparison_date = due_date.replace(tzinfo=None)
         
-        # Hitung sisa hari
-        # Jika comparison_date < now, hasilnya negatif (berarti overdue/lewat)
         delta = comparison_date - now
         days_left = delta.days
         
-        # Tentukan Status
         status = 'upcoming'
         if is_submitted:
             status = 'submitted'
@@ -761,10 +814,8 @@ def get_student_timeline(request):
         elif 0 <= days_left <= 3:
             status = 'urgent'
             
-        # Perbaikan tampilan hari:
-        # Jika hari ini deadline, set days_left 0
         if days_left == -1 and delta.seconds > 0: 
-             days_left = 0 # Masih hari yang sama tapi jam belum lewat (opsional logic)
+             days_left = 0 
 
         timeline_data.append({
             'id': assign.id,
@@ -799,8 +850,9 @@ def complete_lesson(request):
         return HTTPBadRequest(json_body={'error': str(e)})
 
 # ==========================================
-# 9. PROXY DOWNLOAD (FIXED 401 ERROR)
+# 9. PROXY DOWNLOAD (WITH SIGNED URL)
 # ==========================================
+
 @view_config(route_name='download_proxy')
 def download_proxy(request):
     url = request.params.get('url')
@@ -808,62 +860,45 @@ def download_proxy(request):
         return HTTPBadRequest(json_body={'error': 'URL missing'})
     
     try:
-        # 1. PARSING PUBLIC ID DARI URL
-        # URL Contoh: https://res.cloudinary.com/.../image/upload/v12345/folder/file.pdf
         path = urllib.parse.urlparse(url).path
-        
-        # Tentukan resource_type dari URL (image/video/raw)
-        resource_type = 'image' # Default PDF biasanya masuk image di Cloudinary
+        resource_type = 'image' 
         if '/video/' in path: resource_type = 'video'
         elif '/raw/' in path: resource_type = 'raw'
         
-        # Pecah path untuk ambil Public ID
-        # Split berdasarkan '/upload/'
         if '/upload/' in path:
             parts = path.split('/upload/')
-            right_part = parts[1] # v12345/folder/file.pdf
+            right_part = parts[1] 
             
-            # Buang version (v12345) jika ada
             segments = right_part.split('/')
             if segments[0].startswith('v') and segments[0][1:].isdigit():
                 segments.pop(0)
             
-            # Gabungkan sisanya jadi Public ID
             public_id_with_ext = "/".join(segments)
             
-            # Pisahkan ekstensi (Cloudinary butuh public_id tanpa ekstensi untuk generate url)
             if '.' in public_id_with_ext:
                 public_id, ext = public_id_with_ext.rsplit('.', 1)
             else:
                 public_id = public_id_with_ext
                 ext = None
                 
-            # 2. GENERATE SIGNED URL (KUNCI UTAMA)
-            # Ini membuat URL baru dengan token keamanan (signature)
             signed_url, options = cloudinary.utils.cloudinary_url(
                 public_id,
                 resource_type=resource_type,
                 format=ext,
-                sign_url=True, # Aktifkan signing
+                sign_url=True,
                 secure=True
             )
-            
-            # Gunakan URL yang sudah ditandatangani
             target_url = signed_url
         else:
-            # Jika format URL aneh, coba pakai apa adanya
             target_url = url
 
-        # 3. REQUEST KE CLOUDINARY
-        # Header minimalis agar tidak diblokir
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
         }
         
         r = requests.get(target_url, headers=headers, stream=True)
-        r.raise_for_status() # Cek error 401/404
+        r.raise_for_status()
         
-        # 4. STREAMING RESPONSE
         filename = url.split('/')[-1].split('?')[0]
         
         response = Response(content_type=r.headers.get('Content-Type'))
