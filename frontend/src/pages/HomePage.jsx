@@ -130,15 +130,11 @@ const HomePage = () => {
             </div>
           ) : (
             <>
-              <h1 style={{ 
-                fontSize: '32px', 
-                fontWeight: '800', 
-                color: colors.textDark, 
-                marginBottom: '12px',
-                background: `linear-gradient(135deg, ${colors.primary}, #FF6B6B)`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+              <h1 style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                color: colors.textDark,
+                marginBottom: '12px'
               }}>
                 Jelajahi Dunia Pembelajaran
               </h1>
