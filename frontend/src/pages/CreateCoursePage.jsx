@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import api from '../api/axios';
 
 const CreateCoursePage = () => {
@@ -56,11 +57,32 @@ const CreateCoursePage = () => {
           headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      alert("Kursus berhasil dibuat!");
+      // SweetAlert: Toast Notification Success
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer)
+          toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+      });
+
+      Toast.fire({
+        icon: 'success',
+        title: 'Kursus berhasil dibuat!'
+      });
+      
       navigate('/instructor-dashboard');
     } catch (err) {
       console.error(err);
-      alert("Gagal membuat kursus.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal',
+        text: 'Terjadi kesalahan saat membuat kursus.',
+      });
     } finally {
       setIsSubmitting(false);
     }

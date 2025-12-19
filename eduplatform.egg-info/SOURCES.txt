@@ -19,11 +19,6 @@ eduplatform.egg-info/requires.txt
 eduplatform.egg-info/top_level.txt
 eduplatform/alembic/script.py.mako
 eduplatform/alembic/versions/README.txt
-eduplatform/env/Lib/site-packages/pip-25.0.1.dist-info/AUTHORS.txt
-eduplatform/env/Lib/site-packages/pip-25.0.1.dist-info/LICENSE.txt
-eduplatform/env/Lib/site-packages/pip-25.0.1.dist-info/entry_points.txt
-eduplatform/env/Lib/site-packages/pip-25.0.1.dist-info/top_level.txt
-eduplatform/env/Lib/site-packages/pip/_vendor/vendor.txt
 eduplatform/models/__init__.py
 eduplatform/models/meta.py
 eduplatform/models/models.py

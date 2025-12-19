@@ -8,8 +8,18 @@ const InstructorDashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
 
+  // --- THEME CONFIGURATION ---
+  const theme = {
+    primary: '#FF7E3E',
+    primaryLight: '#FFF5F1',
+    bg: '#FDF8F4',
+    white: '#FFFFFF',
+    textMain: '#2D2D2D',
+    textSec: '#757575',
+    shadowCard: '0 10px 25px rgba(255, 126, 62, 0.08)',
+  };
+
   useEffect(() => {
-    // 1. Cek Role: Hanya Instruktur yang boleh akses
     if (!user || user.role !== 'instructor') {
       navigate('/');
       return;
@@ -17,8 +27,6 @@ const InstructorDashboard = () => {
 
     const fetchMyTeachingCourses = async () => {
       try {
-        // [API] Mengambil daftar kursus yang dibuat oleh instruktur ini
-        // Pastikan endpoint ini sesuai dengan routes.py di backend Anda
         const response = await api.get(`/instructors/${user.id}/courses`);
         setCourses(response.data.courses); 
       } catch (err) {
@@ -30,32 +38,31 @@ const InstructorDashboard = () => {
     fetchMyTeachingCourses();
   }, [user, navigate]);
 
-  // Hitung Statistik Sederhana
   const totalCourses = courses.length;
-  // Contoh statistik lain: Total kategori unik yang diajarkan
   const uniqueCategories = [...new Set(courses.map(c => c.category))].length;
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">
-        <div className="spinner-border text-primary" role="status"></div>
+      <div className="d-flex justify-content-center align-items-center min-vh-100" style={{backgroundColor: theme.bg}}>
+        <div className="spinner-border" role="status" style={{color: theme.primary}}></div>
       </div>
     );
   }
 
   return (
-    <div className="min-vh-100 py-4" style={{ backgroundColor: '#f8f9fa' }}>
+    <div className="min-vh-100 py-5" style={{ backgroundColor: theme.bg, fontFamily: "'Poppins', sans-serif" }}>
       <div className="container" style={{ maxWidth: '1100px' }}>
         
         {/* HEADER SECTION */}
-        <div className="d-flex justify-content-between align-items-center mb-5 border-bottom pb-4">
+        <div className="d-flex justify-content-between align-items-center mb-5 pb-4" style={{borderBottom: `2px solid ${theme.primaryLight}`}}>
           <div>
-            <h2 className="fw-bold text-dark mb-1">Dashboard Instruktur</h2>
-            <p className="text-muted mb-0">Kelola konten pembelajaran dan pantau perkembangan kursus Anda.</p>
+            <h2 className="fw-bold mb-1" style={{color: theme.textMain}}>Dashboard Instruktur</h2>
+            <p className="mb-0" style={{color: theme.textSec}}>Kelola konten pembelajaran dan pantau perkembangan kursus Anda.</p>
           </div>
           <button 
             onClick={() => navigate('/create-course')}
-            className="btn btn-primary fw-bold px-4 rounded-pill shadow-sm d-flex align-items-center gap-2"
+            className="btn fw-bold px-4 rounded-pill shadow-sm d-flex align-items-center gap-2"
+            style={{ backgroundColor: theme.primary, color: 'white', border: 'none', padding: '12px 24px' }}
           >
             <i className="bi bi-plus-lg"></i> Buat Kursus Baru
           </button>
@@ -63,44 +70,46 @@ const InstructorDashboard = () => {
         
         {/* STATISTIK RINGKAS */}
         <div className="row g-4 mb-5">
+          {/* Card 1 */}
           <div className="col-md-6 col-lg-4">
-            <div className="card border-0 shadow-sm p-3 h-100" style={{ borderRadius: '16px' }}>
-              <div className="d-flex align-items-center gap-3">
-                <div className="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
+            <div className="card border-0 h-100" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
+              <div className="card-body p-4 d-flex align-items-center gap-3">
+                <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '60px', height: '60px', backgroundColor: theme.primaryLight, color: theme.primary}}>
                   <i className="bi bi-collection-play-fill fs-3"></i>
                 </div>
                 <div>
-                  <h3 className="fw-bold mb-0">{totalCourses}</h3>
-                  <small className="text-muted fw-semibold">Kursus Aktif</small>
+                  <h3 className="fw-bold mb-0" style={{color: theme.textMain}}>{totalCourses}</h3>
+                  <small className="fw-semibold" style={{color: theme.textSec}}>Kursus Aktif</small>
                 </div>
               </div>
             </div>
           </div>
           
+          {/* Card 2 */}
           <div className="col-md-6 col-lg-4">
-            <div className="card border-0 shadow-sm p-3 h-100" style={{ borderRadius: '16px' }}>
-              <div className="d-flex align-items-center gap-3">
-                <div className="bg-info bg-opacity-10 p-3 rounded-circle text-info">
+            <div className="card border-0 h-100" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
+              <div className="card-body p-4 d-flex align-items-center gap-3">
+                 <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '60px', height: '60px', backgroundColor: '#E0F2FE', color: '#0EA5E9'}}>
                   <i className="bi bi-tags-fill fs-3"></i>
                 </div>
                 <div>
-                  <h3 className="fw-bold mb-0">{uniqueCategories}</h3>
-                  <small className="text-muted fw-semibold">Kategori Materi</small>
+                  <h3 className="fw-bold mb-0" style={{color: theme.textMain}}>{uniqueCategories}</h3>
+                  <small className="fw-semibold" style={{color: theme.textSec}}>Kategori Materi</small>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Card 3 (Placeholder) */}
           <div className="col-md-6 col-lg-4">
-             {/* Placeholder untuk fitur masa depan (misal: Total Siswa) */}
-            <div className="card border-0 shadow-sm p-3 h-100" style={{ borderRadius: '16px' }}>
-              <div className="d-flex align-items-center gap-3">
-                <div className="bg-success bg-opacity-10 p-3 rounded-circle text-success">
+            <div className="card border-0 h-100" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
+              <div className="card-body p-4 d-flex align-items-center gap-3">
+                 <div className="rounded-circle d-flex align-items-center justify-content-center" style={{width: '60px', height: '60px', backgroundColor: '#DCFCE7', color: '#22C55E'}}>
                   <i className="bi bi-people-fill fs-3"></i>
                 </div>
                 <div>
-                  <h3 className="fw-bold mb-0">-</h3>
-                  <small className="text-muted fw-semibold">Total Siswa</small>
+                  <h3 className="fw-bold mb-0" style={{color: theme.textMain}}>-</h3>
+                  <small className="fw-semibold" style={{color: theme.textSec}}>Total Siswa</small>
                 </div>
               </div>
             </div>
@@ -108,21 +117,22 @@ const InstructorDashboard = () => {
         </div>
 
         {/* DAFTAR KURSUS */}
-        <div className="d-flex align-items-center justify-content-between mb-3">
-            <h5 className="fw-bold text-dark">Daftar Kursus Anda</h5>
+        <div className="d-flex align-items-center justify-content-between mb-4">
+            <h5 className="fw-bold" style={{color: theme.textMain}}>Daftar Kursus Anda</h5>
         </div>
 
         {courses.length === 0 ? (
-          <div className="text-center py-5 card border-0 shadow-sm" style={{ borderRadius: '16px' }}>
-            <div className="mb-3 text-muted opacity-50">
+          <div className="text-center py-5 card border-0" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
+            <div className="mb-3 opacity-50" style={{color: theme.primary}}>
                 <i className="bi bi-folder2-open fs-1"></i>
             </div>
-            <h5 className="text-muted">Belum ada kursus yang dibuat.</h5>
-            <p className="small text-muted mb-4">Mulai bagikan ilmu Anda sekarang.</p>
+            <h5 style={{color: theme.textMain}}>Belum ada kursus yang dibuat.</h5>
+            <p className="small mb-4" style={{color: theme.textSec}}>Mulai bagikan ilmu Anda sekarang.</p>
             <div>
                 <button 
                     onClick={() => navigate('/create-course')}
                     className="btn btn-outline-primary rounded-pill px-4"
+                    style={{ borderColor: theme.primary, color: theme.primary }}
                 >
                     Buat Kursus Pertama
                 </button>
@@ -132,8 +142,8 @@ const InstructorDashboard = () => {
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             {courses.map((course) => (
               <div className="col" key={course.id}>
-                <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '16px', overflow: 'hidden', transition: 'transform 0.2s' }}>
-                  {/* Thumbnail & Badge ID */}
+                <div className="card h-100 border-0" style={{ borderRadius: '20px', overflow: 'hidden', boxShadow: theme.shadowCard, backgroundColor: theme.white, transition: 'transform 0.2s' }}>
+                  {/* Thumbnail */}
                   <div className="position-relative">
                       <img 
                           src={course.thumbnail_url || 'https://via.placeholder.com/400x200?text=No+Thumbnail'} 
@@ -142,7 +152,7 @@ const InstructorDashboard = () => {
                           style={{ height: '180px', objectFit: 'cover' }}
                       />
                       <div className="position-absolute top-0 start-0 m-3">
-                        <span className="badge bg-white text-dark shadow-sm px-2 py-1 rounded fw-bold border">
+                        <span className="badge bg-white shadow-sm px-2 py-1 rounded fw-bold border" style={{color: theme.textMain}}>
                             ID: {course.id}
                         </span>
                       </div>
@@ -150,14 +160,14 @@ const InstructorDashboard = () => {
 
                   <div className="card-body d-flex flex-column p-4">
                     <div className="mb-2">
-                        <span className="badge bg-primary bg-opacity-10 text-primary px-2 py-1 rounded">
+                        <span className="badge px-2 py-1 rounded" style={{backgroundColor: theme.primaryLight, color: theme.primary}}>
                             {course.category || 'Umum'}
                         </span>
                     </div>
-                    <h5 className="card-title fw-bold text-dark mb-2 text-truncate" title={course.title}>
+                    <h5 className="card-title fw-bold mb-2 text-truncate" title={course.title} style={{color: theme.textMain}}>
                         {course.title}
                     </h5>
-                    <p className="card-text text-muted small mb-4 line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p className="card-text small mb-4 line-clamp-2" style={{ color: theme.textSec, display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                         {course.description || 'Tidak ada deskripsi.'}
                     </p>
                     
@@ -165,13 +175,15 @@ const InstructorDashboard = () => {
                     <div className="mt-auto d-flex flex-column gap-2">
                       <button 
                           onClick={() => navigate(`/manage-course/${course.id}`)}
-                          className="btn btn-primary w-100 fw-bold rounded-pill"
+                          className="btn w-100 fw-bold rounded-pill"
+                          style={{backgroundColor: theme.primary, color: 'white', border: 'none'}}
                       >
                           <i className="bi bi-pencil-square me-2"></i>Kelola Kelas
                       </button>
                       <button 
                           onClick={() => navigate(`/course/${course.id}`)}
-                          className="btn btn-outline-secondary w-100 fw-semibold rounded-pill"
+                          className="btn w-100 fw-semibold rounded-pill"
+                          style={{border: `1px solid ${theme.textSec}`, color: theme.textSec, background: 'transparent'}}
                       >
                           <i className="bi bi-eye me-2"></i>Lihat Preview
                       </button>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import api from '../api/axios';
 
 const LoginPage = () => {
@@ -35,8 +36,12 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    // Logika login google nanti di sini (misal menggunakan Firebase atau OAuth2)
-    alert("Fitur Login Google akan segera tersedia!");
+    Swal.fire({
+        icon: 'info',
+        title: 'Segera Hadir',
+        text: 'Fitur Login dengan Google sedang dalam pengembangan! 🚀',
+        confirmButtonColor: '#FF7E3E'
+    });
   };
 
   // Tema Warna Focotech

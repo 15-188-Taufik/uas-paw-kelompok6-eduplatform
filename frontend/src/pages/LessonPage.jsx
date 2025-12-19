@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import api from '../api/axios';
 
 const LessonPage = () => {
@@ -55,6 +56,11 @@ const LessonPage = () => {
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF7E3E; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #D55A1E; }
+    
+    /* SweetAlert Custom Font */
+    div:where(.swal2-container) {
+      font-family: 'Poppins', sans-serif !important;
+    }
   `;
 
   // --- MAIN EFFECT: DATA FETCHING ---
@@ -64,7 +70,6 @@ const LessonPage = () => {
         setLoading(true);
         
         // 1. Ambil Detail Lesson saat ini
-        // Mengirim student_id agar Backend bisa cek tabel 'LessonCompletion'
         const endpoint = user ? `/lessons/${id}?student_id=${user.id}` : `/lessons/${id}`;
         const res = await api.get(endpoint);
         
@@ -83,16 +88,10 @@ const LessonPage = () => {
           // Ambil daftar modul
           const modulesRes = await api.get(`/courses/${activeCourseId}/modules`);
           
-          // [CRITICAL FIX] 
-          // Kita harus melakukan looping untuk mengambil daftar LESSON di dalam setiap modul
-          // Tanpa ini, sidebar akan kosong (hanya judul modul, tanpa lesson).
           const detailedModules = await Promise.all(
             modulesRes.data.modules.map(async (mod) => {
                try {
                  const lessonsRes = await api.get(`/modules/${mod.id}/lessons`);
-                 // (Opsional) Ambil assignments jika perlu
-                 // const assignsRes = await api.get(`/modules/${mod.id}/assignments`);
-                 
                  return { 
                     ...mod, 
                     lessons: lessonsRes.data.lessons || [] 
@@ -130,7 +129,7 @@ const LessonPage = () => {
                     nextLessonId = l.id;
                     break; // Ketemu lesson berikutnya!
                 }
-                // Pakai String() biar aman (kadang ID angka vs string)
+                // Pakai String() biar aman
                 if (String(l.id) === String(lesson.id)) {
                     foundCurrent = true;
                 }
@@ -148,7 +147,14 @@ const LessonPage = () => {
         navigate(targetUrl);
         window.scrollTo(0, 0);
     } else {
-        alert("Selamat! Anda telah mencapai akhir materi kursus ini. 🎉");
+        // SweetAlert: Akhir Kursus
+        Swal.fire({
+            title: '🎉 Kursus Selesai!',
+            text: 'Selamat! Anda telah mencapai akhir materi kursus ini.',
+            icon: 'success',
+            confirmButtonText: 'Mantap!',
+            confirmButtonColor: theme.primary
+        });
     }
   };
 
@@ -161,13 +167,30 @@ const LessonPage = () => {
       });
       setIsCompleted(true);
       
-      // Popup Konfirmasi Pindah
-      if(window.confirm("Selamat! Materi selesai. Lanjut ke materi berikutnya?")) {
-          goToNextLesson();
-      }
+      // SweetAlert: Konfirmasi Pindah
+      Swal.fire({
+          title: 'Materi Selesai! ✅',
+          text: "Ingin lanjut ke materi berikutnya sekarang?",
+          icon: 'success',
+          showCancelButton: true,
+          confirmButtonColor: theme.primary,
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Ya, Lanjut! 🚀',
+          cancelButtonText: 'Tetap di sini'
+      }).then((result) => {
+          if (result.isConfirmed) {
+              goToNextLesson();
+          }
+      });
+
     } catch (err) {
       console.error(err);
-      alert("Gagal menyimpan progress. Cek koneksi internet.");
+      Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: 'Gagal menyimpan progress. Cek koneksi internet.',
+          confirmButtonColor: theme.primary
+      });
     }
   };
 
