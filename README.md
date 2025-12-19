@@ -24,7 +24,7 @@ Proyek ini bertujuan untuk menjembatani kesenjangan antara pengajar (instruktur)
 
 * **🌐 Frontend Deployment:** [https://www.eduplatform.web.id/](https://www.eduplatform.web.id/) (Alternatif: [Vercel App](https://uas-paw-kelompok6-eduplatform.vercel.app/))
 * **⚙️ Backend API:** [https://api.eduplatform.web.id/](https://api.eduplatform.web.id/)
-* **🎥 Video Presentasi:** [Masukkan Link Video Di Sini]
+* **🎥 Video Presentasi:** [https://demoEduPlatform.com](https://youtu.be/yXTYcGl-Lno?si=0u88M5bxNUnnct6a)
 
 ---
 
