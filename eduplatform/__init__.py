@@ -4,37 +4,35 @@ from pyramid.events import NewRequest
 
 def add_cors_headers_response_callback(event):
     def cors_headers(request, response):
-        # 1. Ambil alamat si pengirim (misal: https://uas-paw-....vercel.app)
+        # 1. Cek siapa yang mengirim request (Vercel / Localhost)
         origin = request.headers.get('Origin')
         
-        # 2. LOGIKA PENTING:
-        # Jika request punya Origin (dari browser), kita pantulkan balik (Echo).
-        # Ini WAJIB jika frontend pakai withCredentials=True.
-        # Bintang '*' DILARANG di sini.
+        # 2. JIKA ada Origin (request dari browser), pantulkan balik origin tersebut.
+        # Ini adalah SYARAT WAJIB jika withCredentials=True
         if origin:
             response.headers.update({
                 'Access-Control-Allow-Origin': origin,
             })
         else:
-            # Fallback (misal akses langsung dari Postman/Curl) baru boleh pakai bintang
+            # Fallback jika request dari server-ke-server (bukan browser)
             response.headers.update({
                 'Access-Control-Allow-Origin': '*',
             })
 
-        # 3. Header standar lainnya
+        # 3. Header wajib lainnya
         response.headers.update({
             'Access-Control-Allow-Methods': 'POST,GET,DELETE,PUT,OPTIONS',
             'Access-Control-Allow-Headers': 'Origin, Content-Type, Accept, Authorization',
-            'Access-Control-Allow-Credentials': 'true', # Ini yang bikin error kalau Origin-nya '*'
+            'Access-Control-Allow-Credentials': 'true', # Ini penyebab error sebelumnya jika Origin-nya '*'
             'Access-Control-Max-Age': '1728000',
         })
     event.request.add_response_callback(cors_headers)
 
 def main(global_config, **settings):
-    # Setup Database URL dari Environment Variable
+    # Setup Database URL dari Environment (Render)
     if 'DATABASE_URL' in os.environ:
         settings['sqlalchemy.url'] = os.environ['DATABASE_URL']
-        # Setting tambahan untuk menjaga koneksi database tetap hidup
+        # Setting pool agar koneksi database Neon tidak putus
         settings['sqlalchemy.pool_pre_ping'] = 'true'
         settings['sqlalchemy.pool_recycle'] = '300'
 
@@ -43,7 +41,7 @@ def main(global_config, **settings):
         config.include('.models')
         config.include('.routes')
         
-        # PENTING: Daftarkan fungsi CORS di atas
+        # PENTING: Aktifkan CORS Listener yang baru kita buat
         config.add_subscriber(add_cors_headers_response_callback, NewRequest)
         
         config.scan()
