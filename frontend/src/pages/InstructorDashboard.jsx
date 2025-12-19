@@ -20,11 +20,13 @@ const InstructorDashboard = () => {
   };
 
   useEffect(() => {
+    // 1. Cek Role
     if (!user || user.role !== 'instructor') {
       navigate('/');
       return;
     }
 
+    // 2. Fetch Data Kursus
     const fetchMyTeachingCourses = async () => {
       try {
         const response = await api.get(`/api/instructors/${user.id}/courses`);
@@ -38,8 +40,21 @@ const InstructorDashboard = () => {
     fetchMyTeachingCourses();
   }, [user, navigate]);
 
+  // --- LOGIKA HITUNG STATISTIK ---
+  
+  // 1. Total Kursus
   const totalCourses = courses.length;
+
+  // 2. Total Kategori Unik
   const uniqueCategories = [...new Set(courses.map(c => c.category))].length;
+
+  // 3. [FIX] Total Siswa (Menjumlahkan seluruh siswa dari semua kursus)
+  const totalStudents = courses.reduce((acc, curr) => {
+    // Backend biasanya mengirim 'students_count', 'enrollments_count', atau array 'enrollments'
+    const count = curr.students_count || curr.enrollments_count || (curr.enrollments ? curr.enrollments.length : 0) || 0;
+    return acc + count;
+  }, 0);
+
 
   if (loading) {
     return (
@@ -60,17 +75,17 @@ const InstructorDashboard = () => {
             <p className="mb-0" style={{color: theme.textSec}}>Kelola konten pembelajaran dan pantau perkembangan kursus Anda.</p>
           </div>
           <button 
-            onClick={() => navigate('/create-course')}
+            onClick={() => navigate('/instructor-courses')} // Diarahkan ke halaman list course agar UX konsisten
             className="btn fw-bold px-4 rounded-pill shadow-sm d-flex align-items-center gap-2"
             style={{ backgroundColor: theme.primary, color: 'white', border: 'none', padding: '12px 24px' }}
           >
-            <i className="bi bi-plus-lg"></i> Buat Kursus Baru
+            <i className="bi bi-gear-fill"></i> Kelola Kursus
           </button>
         </div>
         
         {/* STATISTIK RINGKAS */}
         <div className="row g-4 mb-5">
-          {/* Card 1 */}
+          {/* Card 1: Total Kursus */}
           <div className="col-md-6 col-lg-4">
             <div className="card border-0 h-100" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
               <div className="card-body p-4 d-flex align-items-center gap-3">
@@ -85,7 +100,7 @@ const InstructorDashboard = () => {
             </div>
           </div>
           
-          {/* Card 2 */}
+          {/* Card 2: Kategori */}
           <div className="col-md-6 col-lg-4">
             <div className="card border-0 h-100" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
               <div className="card-body p-4 d-flex align-items-center gap-3">
@@ -100,7 +115,7 @@ const InstructorDashboard = () => {
             </div>
           </div>
 
-          {/* Card 3 (Placeholder) */}
+          {/* Card 3: Total Siswa (SUDAH DIPERBAIKI) */}
           <div className="col-md-6 col-lg-4">
             <div className="card border-0 h-100" style={{ borderRadius: '20px', boxShadow: theme.shadowCard, backgroundColor: theme.white }}>
               <div className="card-body p-4 d-flex align-items-center gap-3">
@@ -108,7 +123,8 @@ const InstructorDashboard = () => {
                   <i className="bi bi-people-fill fs-3"></i>
                 </div>
                 <div>
-                  <h3 className="fw-bold mb-0" style={{color: theme.textMain}}>-</h3>
+                  {/* Variabel totalStudents dipanggil di sini */}
+                  <h3 className="fw-bold mb-0" style={{color: theme.textMain}}>{totalStudents}</h3>
                   <small className="fw-semibold" style={{color: theme.textSec}}>Total Siswa</small>
                 </div>
               </div>
@@ -118,7 +134,8 @@ const InstructorDashboard = () => {
 
         {/* DAFTAR KURSUS */}
         <div className="d-flex align-items-center justify-content-between mb-4">
-            <h5 className="fw-bold" style={{color: theme.textMain}}>Daftar Kursus Anda</h5>
+            <h5 className="fw-bold" style={{color: theme.textMain}}>Preview Kursus Anda</h5>
+            <button onClick={() => navigate('/instructor-courses')} className="btn btn-link text-decoration-none fw-bold" style={{color: theme.primary}}>Lihat Semua</button>
         </div>
 
         {courses.length === 0 ? (
@@ -130,7 +147,7 @@ const InstructorDashboard = () => {
             <p className="small mb-4" style={{color: theme.textSec}}>Mulai bagikan ilmu Anda sekarang.</p>
             <div>
                 <button 
-                    onClick={() => navigate('/create-course')}
+                    onClick={() => navigate('/instructor-courses')} // Diarahkan ke create via page courses
                     className="btn btn-outline-primary rounded-pill px-4"
                     style={{ borderColor: theme.primary, color: theme.primary }}
                 >
@@ -140,7 +157,7 @@ const InstructorDashboard = () => {
           </div>
         ) : (
           <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            {courses.map((course) => (
+            {courses.slice(0, 3).map((course) => ( // Hanya menampilkan 3 kursus terbaru di dashboard
               <div className="col" key={course.id}>
                 <div className="card h-100 border-0" style={{ borderRadius: '20px', overflow: 'hidden', boxShadow: theme.shadowCard, backgroundColor: theme.white, transition: 'transform 0.2s' }}>
                   {/* Thumbnail */}
@@ -167,9 +184,10 @@ const InstructorDashboard = () => {
                     <h5 className="card-title fw-bold mb-2 text-truncate" title={course.title} style={{color: theme.textMain}}>
                         {course.title}
                     </h5>
-                    <p className="card-text small mb-4 line-clamp-2" style={{ color: theme.textSec, display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {course.description || 'Tidak ada deskripsi.'}
-                    </p>
+                    <div className="d-flex align-items-center gap-2 mb-3 text-muted small">
+                        <i className="bi bi-person-fill"></i>
+                        <span>{course.students_count || course.enrollments_count || 0} Siswa</span>
+                    </div>
                     
                     {/* Action Buttons */}
                     <div className="mt-auto d-flex flex-column gap-2">
@@ -179,13 +197,6 @@ const InstructorDashboard = () => {
                           style={{backgroundColor: theme.primary, color: 'white', border: 'none'}}
                       >
                           <i className="bi bi-pencil-square me-2"></i>Kelola Kelas
-                      </button>
-                      <button 
-                          onClick={() => navigate(`/course/${course.id}`)}
-                          className="btn w-100 fw-semibold rounded-pill"
-                          style={{border: `1px solid ${theme.textSec}`, color: theme.textSec, background: 'transparent'}}
-                      >
-                          <i className="bi bi-eye me-2"></i>Lihat Preview
                       </button>
                     </div>
                   </div>
