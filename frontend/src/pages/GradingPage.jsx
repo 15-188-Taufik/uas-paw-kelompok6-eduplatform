@@ -20,7 +20,7 @@ const GradingPage = () => {
 
   const fetchSubmissions = async () => {
     try {
-      const res = await api.get(`/assignments/${assignmentId}/submissions`);
+      const res = await api.get(`/api/assignments/${assignmentId}/submissions`);
       setSubmissions(res.data.submissions);
       
       // Judul assignment biasanya ada di res.data.assignment_title atau diambil terpisah
